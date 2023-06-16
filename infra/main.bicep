@@ -120,7 +120,10 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (behindVnet) {
   params: {
     name: virtualNetworkName
     location: location
+    // TODO: Make address space configurable
     virtualNetworkAddressSpacePrefix: '10.1.0.0/16'
+
+    // TODO: Find a better way to handle subnets. I'm not a fan of this array of object approach (losing Intellisense).
     subnets: [
       {
         name: 'subnet1'
