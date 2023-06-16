@@ -46,9 +46,10 @@ param use32BitWorkerProcess bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
 
 // NEW
-// Microsoft.Network/virtualNetowrks properties
+// Microsoft.Network/virtualNetworks properties
 param virtualNetworkName string = ''
 param virtualNetworkSubnetName string = ''
+param behindVnet bool = false
 
 module functions 'appservice.bicep' = {
   name: '${name}-functions'
@@ -82,8 +83,8 @@ module functions 'appservice.bicep' = {
     use32BitWorkerProcess: use32BitWorkerProcess
 
     // NEW - conditional?
-    virtualNetworkRouteAllEnabled: vnetRouteAllEnabled
-    virtualNetworkSubnetId: vnet::subnet.id
+    virtualNetworkRouteAllEnabled: behindVnet ? vnetRouteAllEnabled : false
+    virtualNetworkSubnetId: behindVnet ? vnet::subnet.id : ''
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
   }
 }
@@ -92,8 +93,8 @@ resource storage 'Microsoft.Storage/storageAccounts@2021-09-01' existing = {
   name: storageAccountName
 }
 
-// TODO: only if vnet provided
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (!empty(virtualNetworkName)) {
+// NEW
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (behindVnet) {
   name: virtualNetworkName
 
   resource subnet 'subnets' existing = {

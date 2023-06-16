@@ -49,6 +49,9 @@ module appServicePlan 'bicep/core/host/appserviceplan.bicep' = {
 module function 'bicep/core/host/functions.bicep' = {
   name: 'function'
   scope: rg
+  dependsOn: [
+    vnet
+  ]
   params: {
     location: location
     name: '${abbrs.webSitesFunctions}${resourceToken}'
@@ -62,10 +65,9 @@ module function 'bicep/core/host/functions.bicep' = {
     tags: tags
 
     functionsRuntimeScaleMonitoringEnabled: true
-
-    vnetRouteAllEnabled: behindVnet ? true : false
-    virtualNetworkName: behindVnet ? virtualNetworkName : ''
-    virtualNetworkSubnetName: behindVnet ? 'subnet1' : ''
+    behindVnet: behindVnet
+    virtualNetworkName: virtualNetworkName
+    virtualNetworkSubnetName: 'subnet1'
   }
 }
 
@@ -73,10 +75,18 @@ module function 'bicep/core/host/functions.bicep' = {
 module storage 'bicep/core/storage/storage-account.bicep' = {
   name: 'storage'
   scope: rg
+  dependsOn: [
+    vnet
+  ]
   params: {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
     tags: tags
+
+    // New
+    behindVnet: behindVnet
+    virtualNetworkName: virtualNetworkName
+    virtualNetworkPrivateEndpointSubnetName: 'subnet-private-endpoint'
   }
 }
 
@@ -127,6 +137,13 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (behindVnet) {
               }
             }
           ]
+        }
+      }
+      {
+        name: 'subnet-private-endpoint'
+        properties: {
+          addressPrefix: '10.1.2.0/24'
+          privateEndpointNetworkPolicies: 'Disabled'
         }
       }
     ]
