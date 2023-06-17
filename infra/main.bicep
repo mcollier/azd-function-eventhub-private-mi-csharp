@@ -23,7 +23,7 @@ var resourceToken = toLower(uniqueString(subscription().id, environmentName, loc
 
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
 var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-int'
-var virtualNetworkPrivateEndpointName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-pe'
+var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-pe'
 
 var useVirtualNetwork = true
 
@@ -69,7 +69,7 @@ module function 'bicep/core/host/functions.bicep' = {
     isVirtualNetworkIntegrated: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
     virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
-    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
 }
 
@@ -84,7 +84,7 @@ module storage 'bicep/core/storage/storage-account.bicep' = {
     // New
     isBehindVirutalNetwork: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
-    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
 }
 
@@ -106,6 +106,28 @@ module appInsights 'bicep/core/monitor/applicationinsights.bicep' = {
     dashboardName: ''
     logAnalyticsWorkspaceId: logAnalytics.outputs.id
     location: location
+  }
+}
+
+module eventHubNamespace 'bicep/core/messaging/event-hub-namespace.bicep' = {
+  name: 'eventHubNamespace'
+  scope: rg
+  params: {
+    name: '${abbrs.eventHubNamespaces}${resourceToken}'
+    location: location
+    sku: 'Standard'
+    isBehindVirutalNetwork: true
+    virtualNetworkName: vnet.outputs.virtualNetworkName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
+  }
+}
+
+module eventHub 'bicep/core/messaging/event-hub.bicep' = {
+  name: 'eventHub'
+  scope: rg
+  params: {
+    name: '${abbrs.eventHubNamespacesEventHubs}widget'
+    eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
   }
 }
 
@@ -141,7 +163,7 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (useVirtualNetwor
         }
       }
       {
-        name: virtualNetworkPrivateEndpointName
+        name: virtualNetworkPrivateEndpointSubnetName
         properties: {
           addressPrefix: '10.1.2.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
