@@ -18,22 +18,22 @@ param dnsEndpointType string = 'Standard'
 param kind string = 'StorageV2'
 param minimumTlsVersion string = 'TLS1_2'
 param networkAcls object = {
-  bypass: behindVnet ? 'None' : 'AzureServices'
-  defaultAction: behindVnet ? 'Deny' : 'Allow'
+  bypass: isBehindVirutalNetwork ? 'None' : 'AzureServices'
+  defaultAction: isBehindVirutalNetwork ? 'Deny' : 'Allow'
 }
 @allowed([ 'Enabled', 'Disabled' ])
-param publicNetworkAccess string = behindVnet ? 'Disabled' : 'Enabled'
+param publicNetworkAccess string = isBehindVirutalNetwork ? 'Disabled' : 'Enabled'
 param sku object = { name: 'Standard_LRS' }
 
 //NEW
-param behindVnet bool = false
+param isBehindVirutalNetwork bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 
 var storageServices = [ 'table', 'blob', 'queue', 'file' ]
 
 // NEW
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (behindVnet) {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBehindVirutalNetwork) {
   name: virtualNetworkName
 
   resource subnet 'subnets' existing = {
@@ -75,7 +75,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
 
 // TODO: CONFIRM IF THE ARRAY USAGE AND INDEXING BELOW IS CORRECT. WHAT PROBLEMS AM I CREATING FOR MYSELF?
 // NEW - private endpoints
-resource storagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = [for svc in storageServices: if (behindVnet) {
+resource storagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = [for svc in storageServices: if (isBehindVirutalNetwork) {
   name: 'pe-${svc}'
   location: location
   properties: {
@@ -98,12 +98,12 @@ resource storagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' 
   }
 }]
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = [for svc in storageServices: if (behindVnet) {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = [for svc in storageServices: if (isBehindVirutalNetwork) {
   name: 'privatelink.${svc}.${environment().suffixes.storage}'
   location: 'Global'
 }]
 
-resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-11-01' = [for (svc, i) in storageServices: if (behindVnet) {
+resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-11-01' = [for (svc, i) in storageServices: if (isBehindVirutalNetwork) {
   parent: storagePrivateEndpoint[i]
   name: 'dnsZoneGroup-${svc}'
   properties: {
@@ -118,7 +118,7 @@ resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneG
   }
 }]
 
-module dnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = [for (svc, i) in storageServices: if (behindVnet) {
+module dnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = [for (svc, i) in storageServices: if (isBehindVirutalNetwork) {
   name: 'privatelink-${svc}-vnet-link'
   params: {
     privateDnsZoneName: privateDnsZone[i].name

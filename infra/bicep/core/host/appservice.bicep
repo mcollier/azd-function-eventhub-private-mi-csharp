@@ -36,9 +36,15 @@ param ftpsState string = 'FtpsOnly'
 param healthCheckPath string = ''
 
 // NEW
-param virtualNetworkSubnetId string = ''
+param virtualNetworkName string = ''
+param virtualNetworkIntegrationSubnetName string = ''
+param virtualNetworkPrivateEndpointSubnetName string = ''
 param virtualNetworkRouteAllEnabled bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
+param isVirtualNetworkIntegrated bool = false
+param isBehindVirutalNetwork bool = false
+
+var useVirtualNetwork = isBehindVirutalNetwork || isBehindVirutalNetwork
 
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
@@ -49,11 +55,11 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     serverFarmId: appServicePlanId
 
     //NEW
-    virtualNetworkSubnetId: empty(virtualNetworkSubnetId) ? null : virtualNetworkSubnetId
+    virtualNetworkSubnetId: isVirtualNetworkIntegrated ? vnet::integrationSubnet.id : null
 
     siteConfig: {
       // NEW
-      vnetRouteAllEnabled: virtualNetworkRouteAllEnabled
+      vnetRouteAllEnabled: isVirtualNetworkIntegrated ? virtualNetworkRouteAllEnabled : false
       functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
 
       linuxFxVersion: linuxFxVersion
@@ -135,6 +141,68 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = if (!(empty(
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = if (!empty(applicationInsightsName)) {
   name: applicationInsightsName
+}
+
+// NEW
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetwork) {
+  name: virtualNetworkName
+
+  resource integrationSubnet 'subnets' existing = {
+    name: virtualNetworkIntegrationSubnetName
+  }
+
+  resource privateEndpointSubnet 'subnets' existing = {
+    name: virtualNetworkPrivateEndpointSubnetName
+  }
+}
+
+resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (isBehindVirutalNetwork) {
+  name: 'pe-${appService.name}-site'
+  location: location
+  properties: {
+    subnet: {
+      id: vnet::privateEndpointSubnet.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'plsc-${appService.name}-site'
+        properties: {
+          privateLinkServiceId: appService.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+
+  resource zoneGroup 'privateDnsZoneGroups' = {
+    name: 'appServicePrivateDnsZoneGroup'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'config'
+          properties: {
+            privateDnsZoneId: appServicePrivateDnsZone.id
+          }
+        }
+      ]
+    }
+  }
+}
+
+resource appServicePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (isBehindVirutalNetwork) {
+  name: 'privatelink.azurewebsites.net'
+  location: 'Global'
+}
+
+module appServiceDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (isBehindVirutalNetwork) {
+  name: 'privatelink-appservice-vnet-link'
+  params: {
+    privateDnsZoneName: appServicePrivateDnsZone.name
+    vnetId: vnet.id
+    vnetLinkName: '${vnet.name}-link'
+  }
 }
 
 output identityPrincipalId string = managedIdentity ? appService.identity.principalId : ''

@@ -48,8 +48,10 @@ param functionsRuntimeScaleMonitoringEnabled bool = false
 // NEW
 // Microsoft.Network/virtualNetworks properties
 param virtualNetworkName string = ''
-param virtualNetworkSubnetName string = ''
-param behindVnet bool = false
+param virtualNetworkIntegrationSubnetName string = ''
+param virtualNetworkPrivateEndpointSubnetName string = ''
+param isVirtualNetworkIntegrated bool = false
+param isBehindVirutalNetwork bool = false
 
 module functions 'appservice.bicep' = {
   name: '${name}-functions'
@@ -82,24 +84,19 @@ module functions 'appservice.bicep' = {
     scmDoBuildDuringDeployment: scmDoBuildDuringDeployment
     use32BitWorkerProcess: use32BitWorkerProcess
 
-    // NEW - conditional?
-    virtualNetworkRouteAllEnabled: behindVnet ? vnetRouteAllEnabled : false
-    virtualNetworkSubnetId: behindVnet ? vnet::subnet.id : ''
+    // NEW 
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
+    virtualNetworkRouteAllEnabled: vnetRouteAllEnabled
+    virtualNetworkName: virtualNetworkName
+    virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
+    isBehindVirutalNetwork: isBehindVirutalNetwork
+    isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
   }
 }
 
 resource storage 'Microsoft.Storage/storageAccounts@2021-09-01' existing = {
   name: storageAccountName
-}
-
-// NEW
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (behindVnet) {
-  name: virtualNetworkName
-
-  resource subnet 'subnets' existing = {
-    name: virtualNetworkSubnetName
-  }
 }
 
 output identityPrincipalId string = managedIdentity ? functions.outputs.identityPrincipalId : ''

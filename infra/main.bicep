@@ -22,8 +22,10 @@ var abbrs = loadJsonContent('./bicep/abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
+var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-int'
+var virtualNetworkPrivateEndpointName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-pe'
 
-var behindVnet = true
+var useVirtualNetwork = true
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: 'rg-${environmentName}'
@@ -49,14 +51,11 @@ module appServicePlan 'bicep/core/host/appserviceplan.bicep' = {
 module function 'bicep/core/host/functions.bicep' = {
   name: 'function'
   scope: rg
-  dependsOn: [
-    vnet
-  ]
   params: {
     location: location
     name: '${abbrs.webSitesFunctions}${resourceToken}'
     appServicePlanId: appServicePlan.outputs.id
-    runtimeName: 'dotnetcore'
+    runtimeName: 'dotnet'
     runtimeVersion: '7.0'
     storageAccountName: storage.outputs.name
     managedIdentity: true
@@ -65,28 +64,27 @@ module function 'bicep/core/host/functions.bicep' = {
     tags: tags
 
     functionsRuntimeScaleMonitoringEnabled: true
-    behindVnet: behindVnet
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkSubnetName: 'subnet1'
+    vnetRouteAllEnabled: true
+    isBehindVirutalNetwork: true
+    isVirtualNetworkIntegrated: true
+    virtualNetworkName: vnet.outputs.virtualNetworkName
+    virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointName
   }
 }
 
-// TODO: Add behindVnet support
 module storage 'bicep/core/storage/storage-account.bicep' = {
   name: 'storage'
   scope: rg
-  dependsOn: [
-    vnet
-  ]
   params: {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
     tags: tags
 
     // New
-    behindVnet: behindVnet
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkPrivateEndpointSubnetName: 'subnet-private-endpoint'
+    isBehindVirutalNetwork: true
+    virtualNetworkName: vnet.outputs.virtualNetworkName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointName
   }
 }
 
@@ -114,7 +112,7 @@ module appInsights 'bicep/core/monitor/applicationinsights.bicep' = {
 // TODO: Create a "behind_vnet" boolean to use for toggeling if services use a vnet and are restricted to a vnet
 // https://www.ms-playbook.com/code-with-engineering/developer-experience/toggle-vnet-dev-environment
 
-module vnet 'bicep/core/networking/virtual-network.bicep' = if (behindVnet) {
+module vnet 'bicep/core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
   name: 'vnet'
   scope: rg
   params: {
@@ -126,7 +124,7 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (behindVnet) {
     // TODO: Find a better way to handle subnets. I'm not a fan of this array of object approach (losing Intellisense).
     subnets: [
       {
-        name: 'subnet1'
+        name: virtualNetworkIntegrationSubnetName
         properties: {
           addressPrefix: '10.1.1.0/24'
           // networkSecurityGroup: {}
@@ -143,7 +141,7 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (behindVnet) {
         }
       }
       {
-        name: 'subnet-private-endpoint'
+        name: virtualNetworkPrivateEndpointName
         properties: {
           addressPrefix: '10.1.2.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
