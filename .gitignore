@@ -1,1 +1,6 @@
+# Azure Developer CLI
 .azure
+
+# Azurite
+__blobstorage__
+__azurite_db_*

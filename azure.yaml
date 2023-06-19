@@ -1,3 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
 name: azd-function-eventhub-csharp-private-mi
+infra:
+  provider: bicep
+  path: infra
+pipeline: 
+  provider: github
+requiredVersions:
+services:
+  event-consumer-func:
+    project: src
+    language: csharp
+    host: function

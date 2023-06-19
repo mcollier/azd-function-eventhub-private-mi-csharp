@@ -18,12 +18,22 @@ var tags = {
   'azd-env-name': environmentName
 }
 
-var abbrs = loadJsonContent('./bicep/abbreviations.json')
+var serviceName = 'event-consumer-func'
+
+var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+
+// TODO: These variable names seem long . . . shorten?
+var virtualNetworkAddressSpacePrefix = '10.1.0.0/16'
+var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
+var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
 
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
 var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-int'
 var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-pe'
+
+var eventHubConnectionStringSecretName = 'EventHubConnectionString'
+var eventHubConsumerGroupName = 'widgetfunctionconsumergroup'
 
 var useVirtualNetwork = true
 
@@ -33,47 +43,30 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   tags: tags
 }
 
-module appServicePlan 'bicep/core/host/appserviceplan.bicep' = {
-  name: 'appserviceplan'
+module function 'app/function.bicep' = {
+  name: serviceName
   scope: rg
   params: {
+    name: serviceName
     location: location
-    name: '${abbrs.webServerFarms}${resourceToken}'
-    sku: {
-      name: 'EP1'
-      tier: 'ElasticPremium'
-    }
-    kind: 'elastic'
     tags: tags
-  }
-}
-
-module function 'bicep/core/host/functions.bicep' = {
-  name: 'function'
-  scope: rg
-  params: {
-    location: location
-    name: '${abbrs.webSitesFunctions}${resourceToken}'
-    appServicePlanId: appServicePlan.outputs.id
-    runtimeName: 'dotnet'
-    runtimeVersion: '7.0'
-    storageAccountName: storage.outputs.name
-    managedIdentity: true
+    serviceName: serviceName
+    planName: '${abbrs.webServerFarms}${resourceToken}'
+    functionAppName: '${abbrs.webSitesFunctions}${resourceToken}'
     applicationInsightsName: appInsights.outputs.name
-    alwaysOn: false
-    tags: tags
-
-    functionsRuntimeScaleMonitoringEnabled: true
-    vnetRouteAllEnabled: true
-    isBehindVirutalNetwork: true
-    isVirtualNetworkIntegrated: true
-    virtualNetworkName: vnet.outputs.virtualNetworkName
+    eventHubConnectionStringSecretName: eventHubConnectionStringSecretName
+    eventHubConsumerGroupName: eventHubConsumerGroupName
+    eventHubName: eventHub.outputs.EventHubName
+    eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
+    keyVaultName: keyVault.outputs.name
+    storageAccountName: storage.outputs.name
     virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
+    virtualNetworkName: vnet.outputs.virtualNetworkName
   }
 }
 
-module storage 'bicep/core/storage/storage-account.bicep' = {
+module storage './core/storage/storage-account.bicep' = {
   name: 'storage'
   scope: rg
   params: {
@@ -88,20 +81,23 @@ module storage 'bicep/core/storage/storage-account.bicep' = {
   }
 }
 
-module logAnalytics 'bicep/core/monitor/loganalytics.bicep' = {
+module logAnalytics './core/monitor/loganalytics.bicep' = {
   name: 'logAnalytics'
   scope: rg
   params: {
     name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
     location: location
+    tags: tags
   }
 }
 
-module appInsights 'bicep/core/monitor/applicationinsights.bicep' = {
+module appInsights './core/monitor/applicationinsights.bicep' = {
   name: 'applicationInsights'
   scope: rg
   params: {
     name: '${abbrs.insightsComponents}${resourceToken}'
+    tags: tags
+
     includeDashboard: false
     dashboardName: ''
     logAnalyticsWorkspaceId: logAnalytics.outputs.id
@@ -109,49 +105,64 @@ module appInsights 'bicep/core/monitor/applicationinsights.bicep' = {
   }
 }
 
-module eventHubNamespace 'bicep/core/messaging/event-hub-namespace.bicep' = {
+// TODO: Configure vnet
+module keyVault 'core/security/keyvault.bicep' = {
+  name: 'keyvault'
+  scope: rg
+  params: {
+    name: '${abbrs.keyVaultVaults}${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+module eventHubNamespace './core/messaging/event-hub-namespace.bicep' = {
   name: 'eventHubNamespace'
   scope: rg
   params: {
     name: '${abbrs.eventHubNamespaces}${resourceToken}'
     location: location
+    tags: tags
+
     sku: 'Standard'
+
+    keyVaultName: keyVault.outputs.name
+    secretName: eventHubConnectionStringSecretName
+
     isBehindVirutalNetwork: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
 }
 
-module eventHub 'bicep/core/messaging/event-hub.bicep' = {
+module eventHub './core/messaging/event-hub.bicep' = {
   name: 'eventHub'
   scope: rg
   params: {
     name: '${abbrs.eventHubNamespacesEventHubs}widget'
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
+    consumerGroupName: 'WidgetFunctionConsumerGroup'
   }
 }
 
-// TODO: Create a "behind_vnet" boolean to use for toggeling if services use a vnet and are restricted to a vnet
-// https://www.ms-playbook.com/code-with-engineering/developer-experience/toggle-vnet-dev-environment
-
-module vnet 'bicep/core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
+module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
   name: 'vnet'
   scope: rg
   params: {
     name: virtualNetworkName
     location: location
-    // TODO: Make address space configurable
-    virtualNetworkAddressSpacePrefix: '10.1.0.0/16'
+    tags: tags
+
+    virtualNetworkAddressSpacePrefix: virtualNetworkAddressSpacePrefix
 
     // TODO: Find a better way to handle subnets. I'm not a fan of this array of object approach (losing Intellisense).
     subnets: [
       {
         name: virtualNetworkIntegrationSubnetName
         properties: {
-          addressPrefix: '10.1.1.0/24'
+          addressPrefix: virtualNeworkIntegrationSubnetAddressSpacePrefix
           // networkSecurityGroup: {}
 
-          // TODO: Set up app service integration
           delegations: [
             {
               name: 'delegation'
@@ -165,11 +176,10 @@ module vnet 'bicep/core/networking/virtual-network.bicep' = if (useVirtualNetwor
       {
         name: virtualNetworkPrivateEndpointSubnetName
         properties: {
-          addressPrefix: '10.1.2.0/24'
+          addressPrefix: virtualNetworkPrivateEndpointSubnetAddressSpacePrefix
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
     ]
-    tags: tags
   }
 }

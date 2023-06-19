@@ -30,10 +30,12 @@
                 "ms-azuretools.azure-dev",
                 "ms-azuretools.vscode-bicep",
                 "ms-azuretools.vscode-docker",
+                "azurite.azurite",
                 "ms-vscode.vscode-node-azure-pack",
                 // "ms-dotnettools.csharp",
                 "ms-dotnettools.csdevkit",
-                "ms-dotnettools.vscode-dotnet-runtime"
+                "ms-dotnettools.vscode-dotnet-runtime",
+                "github.vscode-github-actions"
             ]
         }
     },

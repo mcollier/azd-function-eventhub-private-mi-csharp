@@ -9,6 +9,8 @@ param capacity int = 1
 param isBehindVirutalNetwork bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
+param keyVaultName string
+param secretName string
 
 resource namespace 'Microsoft.EventHub/namespaces@2021-11-01' = {
   name: name
@@ -20,12 +22,21 @@ resource namespace 'Microsoft.EventHub/namespaces@2021-11-01' = {
     capacity: capacity
   }
 
-  resource networkRules 'networkRuleSets' = if (isBehindVirutalNetwork) {
+  resource networkRules 'networkRuleSets' = {
     name: 'default'
     properties: {
-      defaultAction: 'Deny'
-      publicNetworkAccess: 'Disabled'
+      defaultAction: isBehindVirutalNetwork ? 'Deny' : 'Allow'
+      publicNetworkAccess: isBehindVirutalNetwork ? 'Disabled' : 'Enabled'
     }
+  }
+}
+
+module eventHubConnectionStringSecret '../security/keyvault-secret.bicep' = {
+  name: 'event-hub-connection-secret'
+  params: {
+    keyVaultName: keyVaultName
+    name: secretName
+    secretValue: listKeys('${namespace.id}/AuthorizationRules/RootManageSharedAccessKey', namespace.apiVersion).primaryConnectionString
   }
 }
 
