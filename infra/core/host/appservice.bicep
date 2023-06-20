@@ -76,10 +76,10 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
         allowedOrigins: union([ 'https://portal.azure.com', 'https://ms.portal.azure.com' ], allowedOrigins)
       }
 
-      // TODO: Ask Jon G. about this.  My understanding is that not setting FUNCTIONS_EXTENSION_VERSION at creation time results in a Functions v2 (?) being created.
-      // That is problematic because the controller checks the function version to ensure runtime scale monitoring is supported.  If runtime is not >= 3, the controller
+      // TODO: Ask Jon G. about this.  My understanding is that not setting FUNCTIONS_EXTENSION_VERSION at creation time results in a Functions v1 (~1) being created.
+      // That is problematic because the controller checks the function version to ensure runtime scale monitoring is supported.  If runtime is not >= 2, the controller
       // fails the deployment.
-      // Setting the extension version in the 'config' block only will result in a v2 function being created initially and then updated to v3/4 when the config is set.
+      // Setting the extension version in the 'config' block only will result in a v1 function being created initially and then updated to v3/4 when the config is set.
       // That creates a restart of the function app.
       appSettings: [
         {
