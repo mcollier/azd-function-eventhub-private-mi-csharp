@@ -35,9 +35,7 @@ jobs:
       
       - name: 'Run Azure CLI commands'
         run: |
-          az account show
-          az group list
-          pwd 
+          az group delete --resource-group 'rg-${{ vars.AZURE_ENV_NAME }}' --yes 
       # - name: Checkout code
       #   uses: actions/checkout@v3
 
