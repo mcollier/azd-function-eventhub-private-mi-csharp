@@ -26,36 +26,48 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Log in with Azure (Federated Credentials)
-        if: ${{ env.AZURE_CLIENT_ID != '' }}
+      - name: Setup Azure CLI
+        uses: azure/login@v1
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }} 
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: 'Run Azure CLI commands'
         run: |
-          azd auth login `
-            --client-id "$Env:AZURE_CLIENT_ID" `
-            --federated-credential-provider "github" `
-            --tenant-id "$Env:AZURE_TENANT_ID"
-        shell: pwsh
+          az account show
+          az group list
+          pwd 
+      # - name: Checkout code
+      #   uses: actions/checkout@v3
 
-      - name: Log in with Azure (Client Credentials)
-        if: ${{ env.AZURE_CREDENTIALS != '' }}
-        run: |
-          $info = $Env:AZURE_CREDENTIALS | ConvertFrom-Json -AsHashtable;
-          Write-Host "::add-mask::$($info.clientSecret)"
+      # - name: Log in with Azure (Federated Credentials)
+      #   if: ${{ env.AZURE_CLIENT_ID != '' }}
+      #   run: |
+      #     azd auth login `
+      #       --client-id "$Env:AZURE_CLIENT_ID" `
+      #       --federated-credential-provider "github" `
+      #       --tenant-id "$Env:AZURE_TENANT_ID"
+      #   shell: pwsh
 
-          azd auth login `
-            --client-id "$($info.clientId)" `
-            --client-secret "$($info.clientSecret)" `
-            --tenant-id "$($info.tenantId)"
-        shell: pwsh
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      # - name: Log in with Azure (Client Credentials)
+      #   if: ${{ env.AZURE_CREDENTIALS != '' }}
+      #   run: |
+      #     $info = $Env:AZURE_CREDENTIALS | ConvertFrom-Json -AsHashtable;
+      #     Write-Host "::add-mask::$($info.clientSecret)"
 
-      - name: Tear Down
-        run: |
-          azd down --purge
-        env:
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      #     azd auth login `
+      #       --client-id "$($info.clientId)" `
+      #       --client-secret "$($info.clientSecret)" `
+      #       --tenant-id "$($info.tenantId)"
+      #   shell: pwsh
+      #   env:
+      #     AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Tear Down
+      #   run: |
+      #     azd down --purge
+      #   env:
+      #     AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      #     AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      #     AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
