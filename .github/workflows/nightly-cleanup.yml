@@ -1,0 +1,31 @@
+name: Nightly Cleanup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Runs at 11 PM ET, which is 3 AM UTC
+  workflow_dispatch:
+
+# Set up permissions for deploying with secretless Azure federated credentials
+# https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux#set-up-azure-login-with-openid-connect-authentication
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Setup Azure CLI
+        uses: azure/login@v1
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }} 
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: 'Run Azure CLI commands'
+        run: |
+          az group delete --resource-group 'rg-${{ vars.AZURE_ENV_NAME }}' --yes 
