@@ -44,7 +44,7 @@ param functionsRuntimeScaleMonitoringEnabled bool = false
 param isVirtualNetworkIntegrated bool = false
 param isBehindVirutalNetwork bool = false
 
-var useVirtualNetwork = isBehindVirutalNetwork || isBehindVirutalNetwork
+var useVirtualNetwork = isBehindVirutalNetwork || isVirtualNetworkIntegrated
 
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name

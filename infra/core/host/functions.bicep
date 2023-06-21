@@ -64,6 +64,8 @@ module functions 'appservice.bicep' = {
     appCommandLine: appCommandLine
     applicationInsightsName: applicationInsightsName
     appServicePlanId: appServicePlanId
+
+    // TODO: Add logic here to add necessary settings if using vnet integration with private storage?
     appSettings: union(appSettings, {
         AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
         FUNCTIONS_EXTENSION_VERSION: extensionVersion

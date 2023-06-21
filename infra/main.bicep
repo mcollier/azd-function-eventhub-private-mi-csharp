@@ -18,8 +18,6 @@ var tags = {
   'azd-env-name': environmentName
 }
 
-var serviceName = 'event-consumer-func'
-
 var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
@@ -29,11 +27,13 @@ var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
 var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
 
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
-var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-int'
-var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}-${resourceToken}-pe'
+var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-int'
+var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-pe'
 
 var eventHubConnectionStringSecretName = 'EventHubConnectionString'
 var eventHubConsumerGroupName = 'widgetfunctionconsumergroup'
+
+var functionAppName = '${abbrs.webSitesFunctions}${resourceToken}'
 
 var useVirtualNetwork = true
 
@@ -43,16 +43,15 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   tags: tags
 }
 
-module function 'app/function.bicep' = {
-  name: serviceName
+module function 'app/event-consumer-func.bicep' = {
+  name: 'event-consumer-function'
   scope: rg
   params: {
-    name: serviceName
+    name: 'event-consumer-func'
     location: location
     tags: tags
-    serviceName: serviceName
     planName: '${abbrs.webServerFarms}${resourceToken}'
-    functionAppName: '${abbrs.webSitesFunctions}${resourceToken}'
+    functionAppName: functionAppName
     applicationInsightsName: appInsights.outputs.name
     eventHubConnectionStringSecretName: eventHubConnectionStringSecretName
     eventHubConsumerGroupName: eventHubConsumerGroupName
@@ -60,6 +59,8 @@ module function 'app/function.bicep' = {
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
     keyVaultName: keyVault.outputs.name
     storageAccountName: storage.outputs.name
+    isBehindVirutalNetwork: false
+    isVirtualNetworkIntegrated: true
     virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
     virtualNetworkName: vnet.outputs.virtualNetworkName
@@ -73,6 +74,12 @@ module storage './core/storage/storage-account.bicep' = {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
     tags: tags
+
+    fileShares: [
+      {
+        name: functionAppName
+      }
+    ]
 
     // New
     isBehindVirutalNetwork: true
@@ -107,7 +114,7 @@ module appInsights './core/monitor/applicationinsights.bicep' = {
 
 // TODO: Configure vnet
 module keyVault 'core/security/keyvault.bicep' = {
-  name: 'keyvault'
+  name: 'keyVault'
   scope: rg
   params: {
     name: '${abbrs.keyVaultVaults}${resourceToken}'

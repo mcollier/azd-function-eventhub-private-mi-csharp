@@ -4,7 +4,6 @@ param tags object = {}
 
 param planName string
 param functionAppName string
-param serviceName string
 param storageAccountName string
 param applicationInsightsName string
 param eventHubNamespaceName string
@@ -12,12 +11,16 @@ param eventHubName string
 param eventHubConsumerGroupName string
 param eventHubConnectionStringSecretName string
 param keyVaultName string
-param virtualNetworkName string
-param virtualNetworkPrivateEndpointSubnetName string
-param virtualNetworkIntegrationSubnetName string
+param isVirtualNetworkIntegrated bool = false
+param isBehindVirutalNetwork bool = false
+param virtualNetworkName string = ''
+param virtualNetworkPrivateEndpointSubnetName string = ''
+param virtualNetworkIntegrationSubnetName string = ''
+
+var useVirtualNetwork = isBehindVirutalNetwork || isVirtualNetworkIntegrated
 
 module appServicePlan '../core/host/appserviceplan.bicep' = {
-  name: '${name}-plan-module'
+  name: '${name}-appserviceplan'
   params: {
     name: planName
     location: location
@@ -32,11 +35,11 @@ module appServicePlan '../core/host/appserviceplan.bicep' = {
 }
 
 module function '../core/host/functions.bicep' = {
-  name: '${name}-function-module'
+  name: '${name}-function'
   params: {
     name: functionAppName
     location: location
-    tags: union(tags, { 'azd-service-name': serviceName })
+    tags: union(tags, { 'azd-service-name': name })
 
     appServicePlanId: appServicePlan.outputs.id
     runtimeName: 'dotnet'
@@ -47,17 +50,27 @@ module function '../core/host/functions.bicep' = {
     alwaysOn: false
 
     functionsRuntimeScaleMonitoringEnabled: true
-    vnetRouteAllEnabled: true
-    isBehindVirutalNetwork: false
-    isVirtualNetworkIntegrated: true
-    virtualNetworkName: vnet.name
-    virtualNetworkIntegrationSubnetName: vnet::integrationSubnet.name
-    virtualNetworkPrivateEndpointSubnetName: vnet::privateEndpointSubnet.name
+
+    // TODO: Make this configurable?
+    vnetRouteAllEnabled: isVirtualNetworkIntegrated ? true : false
+
+    isBehindVirutalNetwork: isBehindVirutalNetwork
+    isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
+    virtualNetworkName: useVirtualNetwork ? vnet.name : ''
+    virtualNetworkIntegrationSubnetName: isVirtualNetworkIntegrated ? vnet::integrationSubnet.name : ''
+    virtualNetworkPrivateEndpointSubnetName: isBehindVirutalNetwork ? vnet::privateEndpointSubnet.name : ''
 
     appSettings: {
       EventHubConnection: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${eventHubConnectionStringSecretName})'
       EventHubName: eventHubNamespace::eventHub.name
       EventHubConsumerGroup: eventHubNamespace::eventHub::consumerGroup.name
+
+      // TODO: Rethink this . . . how to make flexible to support both vnet and non-vnet scenario?
+      WEBSITE_CONTENTOVERVNET: 1
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      WEBSITE_CONTENTSHARE: functionAppName
+      WEBSITE_SKIP_CONTENTSHARE_VALIDATION: 1
+      WEBSITE_RUN_FROM_PACKAGE: 1
     }
   }
 }
@@ -86,7 +99,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' existing = {
   name: keyVaultName
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetwork) {
   name: virtualNetworkName
 
   resource privateEndpointSubnet 'subnets' existing = {
