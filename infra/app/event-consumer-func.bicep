@@ -36,6 +36,7 @@ module functionPlan '../core/host/functionplan.bicep' = {
   }
 }
 
+// TODO: Get a better name for this module.
 module function '../core/host/functions2.bicep' = {
   name: 'func-${name}'
   params: {
