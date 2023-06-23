@@ -2,75 +2,72 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 
-param planName string
+param functionAppPlanName string
 param functionAppName string
 param storageAccountName string
 param applicationInsightsName string
 param eventHubNamespaceName string
 param eventHubName string
 param eventHubConsumerGroupName string
-param eventHubConnectionStringSecretName string
 param keyVaultName string
+param isStorageAccountPrivate bool = false
 param isVirtualNetworkIntegrated bool = false
-param isBehindVirutalNetwork bool = false
+param isBehindVirtualNetwork bool = false
+param vnetRouteAllEnabled bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
 
-var useVirtualNetwork = isBehindVirutalNetwork || isVirtualNetworkIntegrated
+param userAssignedIdentityName string
 
-module appServicePlan '../core/host/appserviceplan.bicep' = {
-  name: '${name}-appserviceplan'
+var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
+
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: userAssignedIdentityName
+}
+
+module functionPlan '../core/host/functionplan.bicep' = {
+  name: 'plan-${name}'
   params: {
-    name: planName
     location: location
     tags: tags
-
-    sku: {
-      name: 'EP1'
-      tier: 'ElasticPremium'
-    }
-    kind: 'elastic'
+    name: functionAppPlanName
+    planSku: 'EP1'
   }
 }
 
-module function '../core/host/functions.bicep' = {
-  name: '${name}-function'
+module function '../core/host/functions2.bicep' = {
+  name: 'func-${name}'
   params: {
-    name: functionAppName
     location: location
     tags: union(tags, { 'azd-service-name': name })
-
-    appServicePlanId: appServicePlan.outputs.id
+    appServicePlanId: functionPlan.outputs.planId
+    name: functionAppName
     runtimeName: 'dotnet'
     runtimeVersion: '6.0'
     storageAccountName: storage.name
-    managedIdentity: true
+    isStorageAccountPrivate: isStorageAccountPrivate
+    userAssignedIdentityName: userAssignedIdentityName
     applicationInsightsName: appInsights.name
-    alwaysOn: false
-
-    functionsRuntimeScaleMonitoringEnabled: true
-
-    // TODO: Make this configurable?
-    vnetRouteAllEnabled: isVirtualNetworkIntegrated ? true : false
-
-    isBehindVirutalNetwork: isBehindVirutalNetwork
+    extensionVersion: '~4'
+    keyVaultName: keyVault.name
+    kind: 'functionapp'
+    enableOryxBuild: false
+    scmDoBuildDuringDeployment: false
+    functionsRuntimeScaleMonitoringEnabled: isVirtualNetworkIntegrated ? true : false
+    vnetRouteAllEnabled: vnetRouteAllEnabled
+    isBehindVirtualNetwork: isBehindVirtualNetwork
     isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
     virtualNetworkName: useVirtualNetwork ? vnet.name : ''
     virtualNetworkIntegrationSubnetName: isVirtualNetworkIntegrated ? vnet::integrationSubnet.name : ''
-    virtualNetworkPrivateEndpointSubnetName: isBehindVirutalNetwork ? vnet::privateEndpointSubnet.name : ''
+    virtualNetworkPrivateEndpointSubnetName: isBehindVirtualNetwork ? vnet::privateEndpointSubnet.name : ''
 
     appSettings: {
-      EventHubConnection: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${eventHubConnectionStringSecretName})'
+      EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
+      EventHubConnection__clientId: uami.properties.clientId
+      EventHubConnection__credential: 'managedidentity'
       EventHubName: eventHubNamespace::eventHub.name
       EventHubConsumerGroup: eventHubNamespace::eventHub::consumerGroup.name
-
-      // TODO: Rethink this . . . how to make flexible to support both vnet and non-vnet scenario?
-      WEBSITE_CONTENTOVERVNET: 1
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-      WEBSITE_CONTENTSHARE: functionAppName
-      WEBSITE_SKIP_CONTENTSHARE_VALIDATION: 1
-      WEBSITE_RUN_FROM_PACKAGE: 1
     }
   }
 }
@@ -108,13 +105,5 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useV
 
   resource integrationSubnet 'subnets' existing = {
     name: virtualNetworkIntegrationSubnetName
-  }
-}
-
-module functionKeyVaultAccess '../core/security/keyvault-access.bicep' = {
-  name: 'function-key-vault-access'
-  params: {
-    keyVaultName: keyVault.name
-    principalId: function.outputs.identityPrincipalId
   }
 }

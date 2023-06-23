@@ -6,11 +6,9 @@ param tags object = {}
 param sku string = 'Standard'
 param capacity int = 1
 
-param isBehindVirutalNetwork bool = false
+param isBehindVirtualNetwork bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
-param keyVaultName string
-param secretName string
 
 resource namespace 'Microsoft.EventHub/namespaces@2021-11-01' = {
   name: name
@@ -25,22 +23,13 @@ resource namespace 'Microsoft.EventHub/namespaces@2021-11-01' = {
   resource networkRules 'networkRuleSets' = {
     name: 'default'
     properties: {
-      defaultAction: isBehindVirutalNetwork ? 'Deny' : 'Allow'
-      publicNetworkAccess: isBehindVirutalNetwork ? 'Disabled' : 'Enabled'
+      defaultAction: isBehindVirtualNetwork ? 'Deny' : 'Allow'
+      publicNetworkAccess: isBehindVirtualNetwork ? 'Disabled' : 'Enabled'
     }
   }
 }
 
-module eventHubConnectionStringSecret '../security/keyvault-secret.bicep' = {
-  name: 'event-hub-connection-secret'
-  params: {
-    keyVaultName: keyVaultName
-    name: secretName
-    secretValue: listKeys('${namespace.id}/AuthorizationRules/RootManageSharedAccessKey', namespace.apiVersion).primaryConnectionString
-  }
-}
-
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBehindVirutalNetwork) {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBehindVirtualNetwork) {
   name: virtualNetworkName
 
   resource subnet 'subnets' existing = {
@@ -48,7 +37,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBe
   }
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (isBehindVirutalNetwork) {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (isBehindVirtualNetwork) {
   name: 'pe-${namespace.name}'
   location: location
   properties: {
@@ -85,12 +74,12 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (i
   }
 }
 
-resource eventHubPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (isBehindVirutalNetwork) {
+resource eventHubPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (isBehindVirtualNetwork) {
   name: 'privatelink.servicebus.windows.net'
   location: 'Global'
 }
 
-module privateDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (isBehindVirutalNetwork) {
+module privateDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (isBehindVirtualNetwork) {
   name: 'privatelink-${namespace.name}-vnet-link'
   params: {
     privateDnsZoneName: eventHubPrivateDnsZone.name

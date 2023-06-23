@@ -26,9 +26,6 @@ param extensionVersion string = '~4'
 // Microsoft.Web/sites Properties
 param kind string = 'functionapp,linux'
 
-// NEW
-param vnetRouteAllEnabled bool = false
-
 // Microsoft.Web/sites/config
 param allowedOrigins array = []
 param alwaysOn bool = true
@@ -42,16 +39,6 @@ param minimumElasticInstanceCount int = -1
 param numberOfWorkers int = -1
 param scmDoBuildDuringDeployment bool = true
 param use32BitWorkerProcess bool = false
-//NEW 
-param functionsRuntimeScaleMonitoringEnabled bool = false
-
-// NEW
-// Microsoft.Network/virtualNetworks properties
-param virtualNetworkName string = ''
-param virtualNetworkIntegrationSubnetName string = ''
-param virtualNetworkPrivateEndpointSubnetName string = ''
-param isVirtualNetworkIntegrated bool = false
-param isBehindVirutalNetwork bool = false
 
 module functions 'appservice.bicep' = {
   name: '${name}-functions'
@@ -64,8 +51,6 @@ module functions 'appservice.bicep' = {
     appCommandLine: appCommandLine
     applicationInsightsName: applicationInsightsName
     appServicePlanId: appServicePlanId
-
-    // TODO: Add logic here to add necessary settings if using vnet integration with private storage?
     appSettings: union(appSettings, {
         AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
         FUNCTIONS_EXTENSION_VERSION: extensionVersion
@@ -85,15 +70,6 @@ module functions 'appservice.bicep' = {
     runtimeNameAndVersion: runtimeNameAndVersion
     scmDoBuildDuringDeployment: scmDoBuildDuringDeployment
     use32BitWorkerProcess: use32BitWorkerProcess
-
-    // NEW 
-    functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
-    virtualNetworkRouteAllEnabled: vnetRouteAllEnabled
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
-    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
-    isBehindVirutalNetwork: isBehindVirutalNetwork
-    isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
   }
 }
 

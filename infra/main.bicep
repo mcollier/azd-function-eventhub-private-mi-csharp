@@ -22,20 +22,75 @@ var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
 // TODO: These variable names seem long . . . shorten?
+var useVirtualNetwork = true
 var virtualNetworkAddressSpacePrefix = '10.1.0.0/16'
 var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
 var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
-
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
 var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-int'
 var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-pe'
 
-var eventHubConnectionStringSecretName = 'EventHubConnectionString'
 var eventHubConsumerGroupName = 'widgetfunctionconsumergroup'
-
 var functionAppName = '${abbrs.webSitesFunctions}${resourceToken}'
 
-var useVirtualNetwork = true
+@description('This is the built-in role definition for the Key Vault Secret User role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#key-vault-secrets-user for more information.')
+resource keyVaultSecretUserRoleDefintion 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: subscription()
+  name: '4633458b-17de-408a-b874-0445c86b69e6'
+}
+
+@description('This is the built-in role definition for the Azure Event Hubs Data Receiver role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#azure-event-hubs-data-receiver for more information.')
+resource eventHubDataReceiverUserRoleDefintion 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: subscription()
+  name: 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde'
+}
+
+@description('This is the built-in role definition for the Azure Storage Blob Data Owner role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-blob-data-owner for more information.')
+resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: subscription()
+  name: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
+}
+
+module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
+  name: 'userAssignedManagedIdentity'
+  scope: rg
+  params: {
+    name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+// TODO: Scope to the specific resource (Event Hub, Storage, Key Vault) instead of the resource group.
+module storageRoleAssignment 'core/security/role.bicep' = {
+  name: 'storageRoleAssignment'
+  scope: rg
+  params: {
+    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    roleDefinitionId: storageBlobDataOwnerRoleDefinition.name
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module eventHubRoleAssignment 'core/security/role.bicep' = {
+  name: 'eventHubRoleAssignment'
+  scope: rg
+  params: {
+    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    roleDefinitionId: eventHubDataReceiverUserRoleDefintion.name
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module keyVaultRoleAssignment 'core/security/role.bicep' = {
+  name: 'keyVaultRoleAssignment'
+  scope: rg
+  params: {
+    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    roleDefinitionId: keyVaultSecretUserRoleDefintion.name
+    principalType: 'ServicePrincipal'
+  }
+}
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: 'rg-${environmentName}'
@@ -43,23 +98,25 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   tags: tags
 }
 
-module function 'app/event-consumer-func.bicep' = {
+module eventConsumerFunction 'app/event-consumer-func.bicep' = {
   name: 'event-consumer-function'
   scope: rg
   params: {
     name: 'event-consumer-func'
     location: location
     tags: tags
-    planName: '${abbrs.webServerFarms}${resourceToken}'
+    functionAppPlanName: '${abbrs.webServerFarms}${resourceToken}'
     functionAppName: functionAppName
     applicationInsightsName: appInsights.outputs.name
-    eventHubConnectionStringSecretName: eventHubConnectionStringSecretName
     eventHubConsumerGroupName: eventHubConsumerGroupName
     eventHubName: eventHub.outputs.EventHubName
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
     keyVaultName: keyVault.outputs.name
     storageAccountName: storage.outputs.name
-    isBehindVirutalNetwork: false
+    userAssignedIdentityName: userAssignedManagedIdentity.outputs.name
+    isBehindVirtualNetwork: false
+    isStorageAccountPrivate: true
+    vnetRouteAllEnabled: true
     isVirtualNetworkIntegrated: true
     virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
@@ -81,12 +138,28 @@ module storage './core/storage/storage-account.bicep' = {
       }
     ]
 
-    // New
-    isBehindVirutalNetwork: true
+    isBehindVirtualNetwork: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
 }
+
+// module storage 'core/storage/private-storage-account.bicep' = {
+//   name: 'storage'
+//   scope: rg
+//   params: {
+//     name: '${abbrs.storageStorageAccounts}${resourceToken}'
+//     location: location
+//     tags: tags
+//     virtualNetworkName: vnet.outputs.virtualNetworkName
+//     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
+//     fileShares: [
+//       {
+//         name: functionAppName
+//       }
+//     ]
+//   }
+// }
 
 module logAnalytics './core/monitor/loganalytics.bicep' = {
   name: 'logAnalytics'
@@ -120,6 +193,7 @@ module keyVault 'core/security/keyvault.bicep' = {
     name: '${abbrs.keyVaultVaults}${resourceToken}'
     location: location
     tags: tags
+    enabledForRbacAuthorization: true
   }
 }
 
@@ -133,10 +207,7 @@ module eventHubNamespace './core/messaging/event-hub-namespace.bicep' = {
 
     sku: 'Standard'
 
-    keyVaultName: keyVault.outputs.name
-    secretName: eventHubConnectionStringSecretName
-
-    isBehindVirutalNetwork: true
+    isBehindVirtualNetwork: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
@@ -148,7 +219,7 @@ module eventHub './core/messaging/event-hub.bicep' = {
   params: {
     name: '${abbrs.eventHubNamespacesEventHubs}widget'
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
-    consumerGroupName: 'WidgetFunctionConsumerGroup'
+    consumerGroupName: eventHubConsumerGroupName
   }
 }
 
