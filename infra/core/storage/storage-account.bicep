@@ -40,7 +40,7 @@ var storageServices = [ 'table', 'blob', 'queue', 'file' ]
 resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBehindVirtualNetwork) {
   name: virtualNetworkName
 
-  resource subnet 'subnets' existing = {
+  resource privateEndpointSubnet 'subnets' existing = {
     name: virtualNetworkPrivateEndpointSubnetName
   }
 }
@@ -92,8 +92,8 @@ resource storagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' 
   location: location
   properties: {
     subnet: {
-      id: vnet::subnet.id
-      name: virtualNetworkPrivateEndpointSubnetName
+      id: vnet::privateEndpointSubnet.id
+      name: vnet::privateEndpointSubnet.name
     }
     privateLinkServiceConnections: [
       {
