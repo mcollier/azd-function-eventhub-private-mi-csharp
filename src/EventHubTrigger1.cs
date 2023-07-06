@@ -11,8 +11,20 @@ namespace Company.Function
 {
     public static class EventHubTrigger1
     {
+        [FunctionName("TimerTriggerToEventHub")]
+        public static async Task TimerTriggerToEventHubFunction([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
+            [EventHub("%EventHubName%", Connection = "EventHubConnection")] IAsyncCollector<string> outputEvents,
+            ILogger log)
+        {
+            string messageBody = $"C# Timer trigger function executed at: {DateTime.Now}";
+            log.LogInformation(messageBody);
+
+            // Send message to output Event Hub
+            await outputEvents.AddAsync(messageBody);
+        }
+
         [FunctionName("EventHubTrigger1")]
-        public static async Task Run([EventHubTrigger("%EventHubName%", Connection = "EventHubConnection", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] events, ILogger log)
+        public static async Task EventConsumerFunction([EventHubTrigger("%EventHubName%", Connection = "EventHubConnection", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] events, ILogger log)
         {
             var exceptions = new List<Exception>();
 

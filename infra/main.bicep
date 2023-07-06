@@ -45,6 +45,11 @@ resource eventHubDataReceiverUserRoleDefintion 'Microsoft.Authorization/roleDefi
   name: 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde'
 }
 
+resource eventHubDataSenderUserRoleDefintion 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: subscription()
+  name: '2b629674-e913-4c01-ae53-ef4638d8f975'
+}
+
 @description('This is the built-in role definition for the Azure Storage Blob Data Owner role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-blob-data-owner for more information.')
 resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: subscription()
@@ -72,12 +77,22 @@ module storageRoleAssignment 'core/security/role.bicep' = {
   }
 }
 
-module eventHubRoleAssignment 'core/security/role.bicep' = {
-  name: 'eventHubRoleAssignment'
+module eventHubReceiverRoleAssignment 'core/security/role.bicep' = {
+  name: 'eventHubReceiverRoleAssignment'
   scope: rg
   params: {
     principalId: userAssignedManagedIdentity.outputs.userPrincipalId
     roleDefinitionId: eventHubDataReceiverUserRoleDefintion.name
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module eventHubSenderRoleAssignment 'core/security/role.bicep' = {
+  name: 'eventHubSenderRoleAssignment'
+  scope: rg
+  params: {
+    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    roleDefinitionId: eventHubDataSenderUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
 }
@@ -138,6 +153,7 @@ module storage './core/storage/storage-account.bicep' = {
       }
     ]
 
+    // TODO: Find a "good" way to get use of vnet to one value (reduce the need to comment out sections).
     isBehindVirtualNetwork: true
     virtualNetworkName: vnet.outputs.virtualNetworkName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
