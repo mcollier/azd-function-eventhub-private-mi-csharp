@@ -56,22 +56,22 @@ resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinit
   name: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 }
 
-module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
-  name: 'userAssignedManagedIdentity'
-  scope: rg
-  params: {
-    name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
-    location: location
-    tags: tags
-  }
-}
+// module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
+//   name: 'userAssignedManagedIdentity'
+//   scope: rg
+//   params: {
+//     name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+//     location: location
+//     tags: tags
+//   }
+// }
 
 // TODO: Scope to the specific resource (Event Hub, Storage, Key Vault) instead of the resource group.
 module storageRoleAssignment 'core/security/role.bicep' = {
   name: 'storageRoleAssignment'
   scope: rg
   params: {
-    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id //userAssignedManagedIdentity.outputs.userPrincipalId
     roleDefinitionId: storageBlobDataOwnerRoleDefinition.name
     principalType: 'ServicePrincipal'
   }
@@ -81,7 +81,7 @@ module eventHubReceiverRoleAssignment 'core/security/role.bicep' = {
   name: 'eventHubReceiverRoleAssignment'
   scope: rg
   params: {
-    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id //userAssignedManagedIdentity.outputs.userPrincipalId
     roleDefinitionId: eventHubDataReceiverUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -91,7 +91,7 @@ module eventHubSenderRoleAssignment 'core/security/role.bicep' = {
   name: 'eventHubSenderRoleAssignment'
   scope: rg
   params: {
-    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id //userAssignedManagedIdentity.outputs.userPrincipalId
     roleDefinitionId: eventHubDataSenderUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -101,7 +101,7 @@ module keyVaultRoleAssignment 'core/security/role.bicep' = {
   name: 'keyVaultRoleAssignment'
   scope: rg
   params: {
-    principalId: userAssignedManagedIdentity.outputs.userPrincipalId
+    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id //userAssignedManagedIdentity.outputs.userPrincipalId
     roleDefinitionId: keyVaultSecretUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -128,7 +128,7 @@ module eventConsumerFunction 'app/event-consumer-func.bicep' = {
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
     keyVaultName: keyVault.outputs.name
     storageAccountName: storage.outputs.name
-    userAssignedIdentityName: userAssignedManagedIdentity.outputs.name
+    // userAssignedIdentityName: userAssignedManagedIdentity.outputs.name
     isBehindVirtualNetwork: false
     isStorageAccountPrivate: true
     vnetRouteAllEnabled: true

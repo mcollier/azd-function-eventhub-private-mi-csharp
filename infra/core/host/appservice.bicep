@@ -35,6 +35,15 @@ param use32BitWorkerProcess bool = false
 param ftpsState string = 'FtpsOnly'
 param healthCheckPath string = ''
 
+//NEW
+// param functionsExtensionVersion string = ''
+param virtualNetworkSubnetId string = ''
+param keyVaultReferenceIdentity string = ''
+param vnetRouteAllEnabled bool = false
+param functionsRuntimeScaleMonitoringEnabled bool = false
+// I don't like this yet!
+param creationTimeConfigurationSettings array
+
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
   location: location
@@ -42,8 +51,19 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
   kind: kind
   properties: {
     serverFarmId: appServicePlanId
+
+    // NEW
+    virtualNetworkSubnetId: virtualNetworkSubnetId
+    // keyVaultReferenceIdentity: keyVaultReferenceIdentity
+
     siteConfig: {
+      // NEW
+      vnetRouteAllEnabled: vnetRouteAllEnabled
+      functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
+      appSettings: creationTimeConfigurationSettings
+
       linuxFxVersion: linuxFxVersion
+
       alwaysOn: alwaysOn
       ftpsState: ftpsState
       minTlsVersion: '1.2'
@@ -61,17 +81,20 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     httpsOnly: true
   }
 
+  // TODO: Support user assigned managed identity.
   identity: { type: managedIdentity ? 'SystemAssigned' : 'None' }
 
-  resource configLogs 'config' = {
-    name: 'logs'
-    properties: {
-      applicationLogs: { fileSystem: { level: 'Verbose' } }
-      detailedErrorMessages: { enabled: true }
-      failedRequestsTracing: { enabled: true }
-      httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
-    }
-  }
+  // TODO: This isn't working with EP plans
+  // when setting WEBSITE_CONTENTAZUREFILECONNECTIONSTRING and WEBSITE_CONTENTSHARE
+  // resource configLogs 'config' = {
+  //   name: 'logs'
+  //   properties: {
+  //     applicationLogs: { fileSystem: { level: 'Verbose' } }
+  //     detailedErrorMessages: { enabled: true }
+  //     failedRequestsTracing: { enabled: true }
+  //     httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
+  //   }
+  // }
 
   resource basicPublishingCredentialsPoliciesFtp 'basicPublishingCredentialsPolicies' = {
     name: 'ftp'
@@ -115,3 +138,6 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing
 output identityPrincipalId string = managedIdentity ? appService.identity.principalId : ''
 output name string = appService.name
 output uri string = 'https://${appService.properties.defaultHostName}'
+
+//NEW
+output id string = appService.id
