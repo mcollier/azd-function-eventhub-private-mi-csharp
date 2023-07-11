@@ -113,12 +113,12 @@ module function '../core/host/functions.bicep' = {
     // userAssignedIdentityName: uami.name
     applicationInsightsName: appInsights.name
     isBehindVirtualNetwork: false
-    creationTimeConfigurationSettings: [
-      {
-        name: 'FUNCTIONS_EXTENSION_VERSION'
-        value: '~4'
-      }
-    ]
+    // creationTimeConfigurationSettings: [
+    //   {
+    //     name: 'FUNCTIONS_EXTENSION_VERSION'
+    //     value: '~4'
+    //   }
+    // ]
     appSettings: {
       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
       // EventHubConnection__clientId: uami.properties.clientId

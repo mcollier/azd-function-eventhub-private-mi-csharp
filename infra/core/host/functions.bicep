@@ -59,7 +59,7 @@ param virtualNetworkPrivateEndpointSubnetName string = ''
 // param isVirtualNetworkIntegrated bool = false
 param isBehindVirtualNetwork bool = false
 param userAssignedIdentityName string = ''
-param creationTimeConfigurationSettings array = []
+// param creationTimeConfigurationSettings array = []
 
 // var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
 // var functionWebsiteAzureFileConnectionStringSecretName = 'AzureFunctionContentAzureFileConnectionStringSecret'
@@ -116,12 +116,12 @@ module functions 'appservice.bicep' = {
     use32BitWorkerProcess: use32BitWorkerProcess
 
     //NEW
-    // functionsExtensionVersion: extensionVersion
     virtualNetworkSubnetId: empty(virtualNetworkName) ? '' : vnet::integrationSubnet.id
     keyVaultReferenceIdentity: empty(userAssignedIdentityName) ? '' : uami.id
     vnetRouteAllEnabled: vnetRouteAllEnabled
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
-    creationTimeConfigurationSettings: creationTimeConfigurationSettings
+    functionsExtensionVersion: extensionVersion
+    // creationTimeConfigurationSettings: creationTimeConfigurationSettings
   }
 }
 

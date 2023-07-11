@@ -41,8 +41,12 @@ param virtualNetworkSubnetId string = ''
 param keyVaultReferenceIdentity string = ''
 param vnetRouteAllEnabled bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
+param functionsExtensionVersion string = ''
+
 // I don't like this yet!
-param creationTimeConfigurationSettings array
+// param creationTimeConfigurationSettings array
+
+var isFunctionApp = contains(kind, 'functionapp')
 
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
@@ -60,7 +64,13 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
       // NEW
       vnetRouteAllEnabled: vnetRouteAllEnabled
       functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
-      appSettings: creationTimeConfigurationSettings
+      // appSettings: creationTimeConfigurationSettings
+      appSettings: isFunctionApp ? [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: functionsExtensionVersion
+        }
+      ] : []
 
       linuxFxVersion: linuxFxVersion
 
@@ -84,17 +94,17 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
   // TODO: Support user assigned managed identity.
   identity: { type: managedIdentity ? 'SystemAssigned' : 'None' }
 
-  // TODO: This isn't working with EP plans
+  // TODO: App Service logs aren't used for Function Apps.This isn't working with EP plans
   // when setting WEBSITE_CONTENTAZUREFILECONNECTIONSTRING and WEBSITE_CONTENTSHARE
-  // resource configLogs 'config' = {
-  //   name: 'logs'
-  //   properties: {
-  //     applicationLogs: { fileSystem: { level: 'Verbose' } }
-  //     detailedErrorMessages: { enabled: true }
-  //     failedRequestsTracing: { enabled: true }
-  //     httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
-  //   }
-  // }
+  resource configLogs 'config' = if (!isFunctionApp) {
+    name: 'logs'
+    properties: {
+      applicationLogs: { fileSystem: { level: 'Verbose' } }
+      detailedErrorMessages: { enabled: true }
+      failedRequestsTracing: { enabled: true }
+      httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
+    }
+  }
 
   resource basicPublishingCredentialsPoliciesFtp 'basicPublishingCredentialsPolicies' = {
     name: 'ftp'
