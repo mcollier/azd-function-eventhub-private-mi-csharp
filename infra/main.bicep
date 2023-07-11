@@ -130,8 +130,8 @@ module eventConsumerFunction 'app/event-consumer-func.bicep' = {
     storageAccountName: storage.outputs.name
     // userAssignedIdentityName: userAssignedManagedIdentity.outputs.name
     isBehindVirtualNetwork: false
-    isStorageAccountPrivate: true
-    vnetRouteAllEnabled: true
+    // isStorageAccountPrivate: true
+    // vnetRouteAllEnabled: true
     isVirtualNetworkIntegrated: true
     virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
     virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
