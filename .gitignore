@@ -4,3 +4,4 @@
 # Azurite
 __blobstorage__
 __azurite_db_*
+.azurite
