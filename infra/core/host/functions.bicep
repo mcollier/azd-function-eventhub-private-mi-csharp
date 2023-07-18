@@ -55,10 +55,10 @@ param functionsRuntimeScaleMonitoringEnabled bool = false
 param virtualNetworkName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
-// param isStorageAccountPrivate bool = false
-// param isVirtualNetworkIntegrated bool = false
 param isBehindVirtualNetwork bool = false
 param userAssignedIdentityName string = ''
+// param isStorageAccountPrivate bool = false
+// param isVirtualNetworkIntegrated bool = false
 // param creationTimeConfigurationSettings array = []
 
 // var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
@@ -121,7 +121,6 @@ module functions 'appservice.bicep' = {
     vnetRouteAllEnabled: vnetRouteAllEnabled
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
     functionsExtensionVersion: extensionVersion
-    // creationTimeConfigurationSettings: creationTimeConfigurationSettings
   }
 }
 
@@ -140,7 +139,7 @@ resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-0
       {
         name: 'plsc-${name}-site'
         properties: {
-          privateLinkServiceId: functions.outputs.id //function.id
+          privateLinkServiceId: functions.outputs.id
           groupIds: [
             'sites'
           ]

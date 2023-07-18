@@ -10,15 +10,15 @@ param eventHubNamespaceName string
 param eventHubName string
 param eventHubConsumerGroupName string
 param keyVaultName string
-// param isStorageAccountPrivate bool = false
 param isVirtualNetworkIntegrated bool = false
 param isBehindVirtualNetwork bool = false
-// param vnetRouteAllEnabled bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
-
 param userAssignedIdentityName string = ''
+
+// param isStorageAccountPrivate bool = false
+// param vnetRouteAllEnabled bool = false
 
 var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
 
@@ -36,57 +36,6 @@ module functionPlan '../core/host/functionplan.bicep' = {
     planSku: 'EP1'
   }
 }
-// module functionPlan '../core/host/appserviceplan.bicep' = {
-//   name: 'plan-${name}'
-//   params: {
-//     location: location
-//     tags: tags
-//     name: functionAppPlanName
-//     reserved: true
-//     sku: {
-//       name: 'EP1'
-//       tier: 'ElasticPremium'
-//       kind: 'elastic'
-//     }
-//   }
-// }
-
-// TODO: Get a better name for this module.
-// module function '../core/host/functions2.bicep' = {
-//   name: 'func-${name}'
-//   params: {
-//     location: location
-//     tags: union(tags, { 'azd-service-name': name })
-//     appServicePlanId: functionPlan.outputs.planId
-//     name: functionAppName
-//     runtimeName: 'dotnet'
-//     runtimeVersion: '6.0'
-//     storageAccountName: storage.name
-//     isStorageAccountPrivate: isStorageAccountPrivate
-//     userAssignedIdentityName: userAssignedIdentityName
-//     applicationInsightsName: appInsights.name
-//     extensionVersion: '~4'
-//     keyVaultName: keyVault.name
-//     kind: 'functionapp'
-//     enableOryxBuild: false
-//     scmDoBuildDuringDeployment: false
-//     functionsRuntimeScaleMonitoringEnabled: isVirtualNetworkIntegrated ? true : false
-//     vnetRouteAllEnabled: vnetRouteAllEnabled
-//     isBehindVirtualNetwork: isBehindVirtualNetwork
-//     isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
-//     virtualNetworkName: useVirtualNetwork ? vnet.name : ''
-//     virtualNetworkIntegrationSubnetName: isVirtualNetworkIntegrated ? vnet::integrationSubnet.name : ''
-//     virtualNetworkPrivateEndpointSubnetName: isBehindVirtualNetwork ? vnet::privateEndpointSubnet.name : ''
-
-//     appSettings: {
-//       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
-//       EventHubConnection__clientId: uami.properties.clientId
-//       EventHubConnection__credential: 'managedidentity'
-//       EventHubName: eventHubNamespace::eventHub.name
-//       EventHubConsumerGroup: eventHubNamespace::eventHub::consumerGroup.name
-//     }
-//   }
-// }
 
 module function '../core/host/functions.bicep' = {
   name: 'func-${name}'
@@ -110,15 +59,9 @@ module function '../core/host/functions.bicep' = {
     virtualNetworkName: vnet.name
     virtualNetworkIntegrationSubnetName: vnet::integrationSubnet.name
     virtualNetworkPrivateEndpointSubnetName: vnet::privateEndpointSubnet.name
-    // userAssignedIdentityName: uami.name
     applicationInsightsName: appInsights.name
-    isBehindVirtualNetwork: false
-    // creationTimeConfigurationSettings: [
-    //   {
-    //     name: 'FUNCTIONS_EXTENSION_VERSION'
-    //     value: '~4'
-    //   }
-    // ]
+    isBehindVirtualNetwork: isBehindVirtualNetwork
+    // userAssignedIdentityName: uami.name
     appSettings: {
       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
       // EventHubConnection__clientId: uami.properties.clientId
@@ -128,13 +71,14 @@ module function '../core/host/functions.bicep' = {
 
       // Needed for EP plans
       WEBSITE_CONTENTSHARE: functionAppName
-      // TODO: Move to Key Vault
+      // TODO: Move to Key Vault (need to use user-assigned managed identity). See https://github.com/Azure/azure-functions-host/issues/7094
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
       // If the storage account is private . . .
       WEBSITE_CONTENTOVERVNET: 1
       WEBSITE_SKIP_CONTENTSHARE_VALIDATION: 1
 
+      // Need the settings below if using identity-based connection for AzureWebJobsStorage.
       // AzureWebJobsStorage__accountName: storage.name
       // AzureWebJobsStorage__credential: 'managedidentity'
       // AzureWebJobsStorage__clientId: uami.properties.clientId
@@ -180,3 +124,40 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useV
 }
 
 output function_app_identity_principal_id string = function.outputs.identityPrincipalId
+
+// TODO: Get a better name for this module.
+// module function '../core/host/functions2.bicep' = {
+//   name: 'func-${name}'
+//   params: {
+//     location: location
+//     tags: union(tags, { 'azd-service-name': name })
+//     appServicePlanId: functionPlan.outputs.planId
+//     name: functionAppName
+//     runtimeName: 'dotnet'
+//     runtimeVersion: '6.0'
+//     storageAccountName: storage.name
+//     isStorageAccountPrivate: isStorageAccountPrivate
+//     userAssignedIdentityName: userAssignedIdentityName
+//     applicationInsightsName: appInsights.name
+//     extensionVersion: '~4'
+//     keyVaultName: keyVault.name
+//     kind: 'functionapp'
+//     enableOryxBuild: false
+//     scmDoBuildDuringDeployment: false
+//     functionsRuntimeScaleMonitoringEnabled: isVirtualNetworkIntegrated ? true : false
+//     vnetRouteAllEnabled: vnetRouteAllEnabled
+//     isBehindVirtualNetwork: isBehindVirtualNetwork
+//     isVirtualNetworkIntegrated: isVirtualNetworkIntegrated
+//     virtualNetworkName: useVirtualNetwork ? vnet.name : ''
+//     virtualNetworkIntegrationSubnetName: isVirtualNetworkIntegrated ? vnet::integrationSubnet.name : ''
+//     virtualNetworkPrivateEndpointSubnetName: isBehindVirtualNetwork ? vnet::privateEndpointSubnet.name : ''
+
+//     appSettings: {
+//       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
+//       EventHubConnection__clientId: uami.properties.clientId
+//       EventHubConnection__credential: 'managedidentity'
+//       EventHubName: eventHubNamespace::eventHub.name
+//       EventHubConsumerGroup: eventHubNamespace::eventHub::consumerGroup.name
+//     }
+//   }
+// }

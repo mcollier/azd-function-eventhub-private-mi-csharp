@@ -36,15 +36,11 @@ param ftpsState string = 'FtpsOnly'
 param healthCheckPath string = ''
 
 //NEW
-// param functionsExtensionVersion string = ''
 param virtualNetworkSubnetId string = ''
 param keyVaultReferenceIdentity string = ''
 param vnetRouteAllEnabled bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
 param functionsExtensionVersion string = ''
-
-// I don't like this yet!
-// param creationTimeConfigurationSettings array
 
 var isFunctionApp = contains(kind, 'functionapp')
 
@@ -57,14 +53,15 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     serverFarmId: appServicePlanId
 
     // NEW
-    virtualNetworkSubnetId: virtualNetworkSubnetId
-    // keyVaultReferenceIdentity: keyVaultReferenceIdentity
+    virtualNetworkSubnetId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
+
+    // NEW - Use for user-assigned managed identity.
+    keyVaultReferenceIdentity: !empty(keyVaultReferenceIdentity) ? keyVaultReferenceIdentity : null
 
     siteConfig: {
       // NEW
       vnetRouteAllEnabled: vnetRouteAllEnabled
       functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
-      // appSettings: creationTimeConfigurationSettings
       appSettings: isFunctionApp ? [
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
