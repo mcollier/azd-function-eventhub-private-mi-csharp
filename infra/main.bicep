@@ -201,7 +201,7 @@ module keyVault 'core/security/keyvault.bicep' = {
   }
 }
 
-module integrationSubnetNsg 'core/networking/network-security-group.bicep' = {
+module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetwork) {
   name: 'integrationSubnetNsg'
   scope: rg
   params: {
@@ -210,7 +210,7 @@ module integrationSubnetNsg 'core/networking/network-security-group.bicep' = {
   }
 }
 
-module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = {
+module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetwork) {
   name: 'privateEndpointSubnetNsg'
   scope: rg
   params: {
