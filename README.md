@@ -19,4 +19,7 @@ The function app will be configured to use the managed identity to connect to th
 
 ### Getting started
 
+1. Add the following settings to your AZD environment:
+    - `VIRTUAL_NETWORK_INTEGRATION="true"`
+    - `VIRTUAL_NETWORK_ISOLATION="true"`
 1. `azd up` to provision the Azure resources and deploy the Azure Function code.
