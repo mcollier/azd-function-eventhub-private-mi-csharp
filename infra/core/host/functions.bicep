@@ -19,7 +19,7 @@ param runtimeName string
 
 //NEW
 @allowed([
-  'dotnet', 'dotnetcore', 'dotnet-isolated', 'node', 'python', 'java', 'powershell', 'custom'
+  'dotnet', 'dotnet-isolated', 'node', 'python', 'java', 'powershell', 'custom'
 ])
 param functionsWorkerRuntime string
 param runtimeNameAndVersion string = '${runtimeName}|${runtimeVersion}'
@@ -57,9 +57,9 @@ param virtualNetworkIntegrationSubnetName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 param isBehindVirtualNetwork bool = false
 param userAssignedIdentityName string = ''
+
 // param isStorageAccountPrivate bool = false
 // param isVirtualNetworkIntegrated bool = false
-// param creationTimeConfigurationSettings array = []
 
 // var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
 // var functionWebsiteAzureFileConnectionStringSecretName = 'AzureFunctionContentAzureFileConnectionStringSecret'
@@ -96,6 +96,7 @@ module functions 'appservice.bicep' = {
     applicationInsightsName: applicationInsightsName
     appServicePlanId: appServicePlanId
     appSettings: union(appSettings, {
+        // TODO: It'd be nice if this used managed identity instead of connection string.
         AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
         FUNCTIONS_EXTENSION_VERSION: extensionVersion
         FUNCTIONS_WORKER_RUNTIME: functionsWorkerRuntime
