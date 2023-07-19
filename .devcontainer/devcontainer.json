@@ -32,11 +32,14 @@
                 "ms-azuretools.vscode-docker",
                 "azurite.azurite",
                 "ms-vscode.vscode-node-azure-pack",
-                // "ms-dotnettools.csharp",
-                "ms-dotnettools.csdevkit",
+                // "ms-dotnettools.csharp@prerelease",
+                "ms-dotnettools.csdevkit@prerelease",
                 "ms-dotnettools.vscode-dotnet-runtime",
                 "github.vscode-github-actions"
-            ]
+            ],
+            "settings": {
+                "azurite.location": ".azurite"
+            }
         }
     },
     "forwardPorts": [

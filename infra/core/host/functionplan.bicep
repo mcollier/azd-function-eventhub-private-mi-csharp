@@ -2,6 +2,11 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 
+// param isLinux bool = true // false == Windows; true == Linux
+
+@allowed([ 'Windows', 'Linux' ])
+param OperatingSystem string = 'Linux'
+
 @allowed([ 'EP1', 'EP2', 'EP3', 'Consumption' ])
 param planSku string
 
@@ -36,7 +41,7 @@ module appServicePlan 'appserviceplan.bicep' = {
     tags: tags
 
     // false == Windows; true == Linux
-    reserved: false
+    reserved: OperatingSystem == 'Linux' ? true : false
 
     sku: {
       name: functionSkuMap[planSku].name
