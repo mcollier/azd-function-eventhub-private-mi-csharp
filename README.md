@@ -19,7 +19,14 @@ The function app will be configured to use the managed identity to connect to th
 
 ### Getting started
 
-1. Add the following settings to your AZD environment:
+1. Create two AZD environments - one for local dev (no vnets) and one for working with vnets.
+1. Add the following settings to your AZD environment for working with vnets:
     - `VIRTUAL_NETWORK_INTEGRATION="true"`
     - `VIRTUAL_NETWORK_ISOLATION="true"`
-1. `azd up` to provision the Azure resources and deploy the Azure Function code.
+1. Add the following settings to your AZD environment for local development (no vnets):
+    - `VIRTUAL_NETWORK_INTEGRATION="false"`
+    - `VIRTUAL_NETWORK_ISOLATION="false"`
+1. For working locally (no vnets), use the `azd up` command to provision the Azure resources and deploy the Azure Function code.
+1. When using vnets and `VIRTUAL_NETWORK_ISOLATION="true"`, use the `azd provision` command to provision the Azure resources.  
+   You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network. 
+  
