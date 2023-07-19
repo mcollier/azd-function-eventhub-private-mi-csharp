@@ -56,16 +56,27 @@ jobs:
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Provision Infrastructure
-        run: azd provision --no-prompt
-        env:
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # - name: Provision Infrastructure
+      #   run: azd provision --no-prompt
+      #   env:
+      #     AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      #     AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      #     AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      #     VIRTUAL_NETWORK_INTEGRATION: ${{ vars.VIRTUAL_NETWORK_INTEGRATION }}
+      #     VIRTUAL_NETWORK_ISOLATION: ${{vars.VIRTUAL_NETWORK_ISOLATION }}
 
-      - name: Deploy Application
-        run: azd deploy --no-prompt
+      # - name: Deploy Application
+      #   run: azd deploy --no-prompt
+      #   env:
+      #     AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      #     AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      #     AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision & Deploy (up)
+        run: azd up --no-prompt
         env:
           AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          VIRTUAL_NETWORK_INTEGRATION: ${{ vars.VIRTUAL_NETWORK_INTEGRATION }}
+          VIRTUAL_NETWORK_ISOLATION: ${{vars.VIRTUAL_NETWORK_ISOLATION }}
