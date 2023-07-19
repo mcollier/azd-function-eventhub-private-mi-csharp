@@ -64,8 +64,6 @@ module function '../core/host/functions.bicep' = {
     // userAssignedIdentityName: uami.name
     appSettings: {
       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
-      // EventHubConnection__clientId: uami.properties.clientId
-      // EventHubConnection__credential: 'managedidentity'
       EventHubName: eventHubNamespace::eventHub.name
       EventHubConsumerGroup: eventHubNamespace::eventHub::consumerGroup.name
 
@@ -78,7 +76,9 @@ module function '../core/host/functions.bicep' = {
       WEBSITE_CONTENTOVERVNET: 1
       WEBSITE_SKIP_CONTENTSHARE_VALIDATION: 1
 
-      // Need the settings below if using identity-based connection for AzureWebJobsStorage.
+      // Need the settings below if using (user-assigned) identity-based connection for AzureWebJobsStorage or EventHubConnection
+      // EventHubConnection__clientId: uami.properties.clientId
+      // EventHubConnection__credential: 'managedidentity'
       // AzureWebJobsStorage__accountName: storage.name
       // AzureWebJobsStorage__credential: 'managedidentity'
       // AzureWebJobsStorage__clientId: uami.properties.clientId
