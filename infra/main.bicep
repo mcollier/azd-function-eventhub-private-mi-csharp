@@ -201,6 +201,24 @@ module keyVault 'core/security/keyvault.bicep' = {
   }
 }
 
+module integrationSubnetNsg 'core/networking/network-security-group.bicep' = {
+  name: 'integrationSubnetNsg'
+  scope: rg
+  params: {
+    name: '${abbrs.networkNetworkSecurityGroups}${resourceToken}-integration-subnet'
+    location: location
+  }
+}
+
+module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = {
+  name: 'privateEndpointSubnetNsg'
+  scope: rg
+  params: {
+    name: '${abbrs.networkNetworkSecurityGroups}${resourceToken}-private-endpoint-subnet'
+    location: location
+  }
+}
+
 module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
   name: 'vnet'
   scope: rg
@@ -215,26 +233,23 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
     subnets: [
       {
         name: virtualNetworkIntegrationSubnetName
-        properties: {
-          addressPrefix: virtualNeworkIntegrationSubnetAddressSpacePrefix
-          // networkSecurityGroup: {}
+        addressPrefix: virtualNeworkIntegrationSubnetAddressSpacePrefix
+        networkSecurityGroupId: integrationSubnetNsg.outputs.id
 
-          delegations: [
-            {
-              name: 'delegation'
-              properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
-              }
+        delegations: [
+          {
+            name: 'delegation'
+            properties: {
+              serviceName: 'Microsoft.Web/serverFarms'
             }
-          ]
-        }
+          }
+        ]
       }
       {
         name: virtualNetworkPrivateEndpointSubnetName
-        properties: {
-          addressPrefix: virtualNetworkPrivateEndpointSubnetAddressSpacePrefix
-          privateEndpointNetworkPolicies: 'Disabled'
-        }
+        addressPrefix: virtualNetworkPrivateEndpointSubnetAddressSpacePrefix
+        networkSecurityGroupId: privateEndpointSubnetNsg.outputs.id
+        privateEndpointNetworkPolicies: 'Disabled'
       }
     ]
   }
