@@ -197,6 +197,8 @@ module keyVault 'core/security/keyvault.bicep' = {
   }
 }
 
+// TODO: Figure out why putting a conditional on the NSG modules causes this error: "ResourceGroupNotFound: Resource group 'rg-private-function-dev' could not be found."
+//  It happens for both NSG modules.
 module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
   name: 'integrationSubnetNsg'
   scope: rg
