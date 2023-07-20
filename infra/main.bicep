@@ -9,9 +9,8 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-// TODO: Rename these
-param virtualNetworkIntegration bool = false
-param virutalNetworkIsolation bool = false
+param useVirtualNetworkIntegration bool = false
+param useVirtualNetworkPrivateEndpoint bool = false
 
 // Tags that should be applied to all resources.
 // 
@@ -25,9 +24,7 @@ var tags = {
 var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
-// TODO: These variable names seem long . . . shorten?
-// TODO: How to make these values work with AZD env params?
-var useVirtualNetwork = virtualNetworkIntegration //false
+// var useVirtualNetwork = useVirtualNetworkIntegration
 var virtualNetworkAddressSpacePrefix = '10.1.0.0/16'
 var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
 var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
@@ -156,10 +153,9 @@ module storage './core/storage/storage-account.bicep' = {
       }
     ]
 
-    // TODO: Find a "good" way to get use of vnet to one value (reduce the need to comment out sections).
-    isBehindVirtualNetwork: useVirtualNetwork
-    virtualNetworkName: useVirtualNetwork ? vnet.outputs.virtualNetworkName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetwork ? virtualNetworkPrivateEndpointSubnetName : ''
+    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
+    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
+    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
@@ -173,9 +169,9 @@ module eventHubNamespace './core/messaging/event-hub-namespace.bicep' = {
 
     sku: 'Standard'
 
-    isBehindVirtualNetwork: useVirtualNetwork
-    virtualNetworkName: useVirtualNetwork ? vnet.outputs.virtualNetworkName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetwork ? virtualNetworkPrivateEndpointSubnetName : ''
+    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
+    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
+    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
@@ -201,7 +197,7 @@ module keyVault 'core/security/keyvault.bicep' = {
   }
 }
 
-module integrationSubnetNsg 'core/networking/network-security-group.bicep' = {
+module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
   name: 'integrationSubnetNsg'
   scope: rg
   params: {
@@ -210,7 +206,7 @@ module integrationSubnetNsg 'core/networking/network-security-group.bicep' = {
   }
 }
 
-module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = {
+module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
   name: 'privateEndpointSubnetNsg'
   scope: rg
   params: {
@@ -219,7 +215,7 @@ module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' =
   }
 }
 
-module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
+module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
   name: 'vnet'
   scope: rg
   params: {
@@ -270,14 +266,10 @@ module eventConsumerFunction 'app/event-consumer-func.bicep' = {
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
     keyVaultName: keyVault.outputs.name
     storageAccountName: storage.outputs.name
-    isBehindVirtualNetwork: virutalNetworkIsolation //false
-    isVirtualNetworkIntegrated: useVirtualNetwork //true
-    virtualNetworkIntegrationSubnetName: useVirtualNetwork ? virtualNetworkIntegrationSubnetName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetwork ? virtualNetworkPrivateEndpointSubnetName : ''
-    virtualNetworkName: useVirtualNetwork ? vnet.outputs.virtualNetworkName : ''
-
-    // isStorageAccountPrivate: true
-    // userAssignedIdentityName: userAssignedManagedIdentity.outputs.name
-    // vnetRouteAllEnabled: true
+    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
+    useVirtualNetworkIntegration: useVirtualNetworkIntegration
+    virtualNetworkIntegrationSubnetName: useVirtualNetworkIntegration ? virtualNetworkIntegrationSubnetName : ''
+    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkIntegration ? virtualNetworkPrivateEndpointSubnetName : ''
+    virtualNetworkName: useVirtualNetworkIntegration ? vnet.outputs.virtualNetworkName : ''
   }
 }

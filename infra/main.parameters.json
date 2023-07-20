@@ -8,11 +8,11 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "virtualNetworkIntegration": {
-      "value": "${VIRTUAL_NETWORK_INTEGRATION}"
+    "useVirtualNetworkIntegration": {
+      "value": "${USE_VIRTUAL_NETWORK_INTEGRATION}"
     },
-    "virutalNetworkIsolation": {
-      "value": "${VIRTUAL_NETWORK_ISOLATION}"
+    "useVirtualNetworkPrivateEndpoint": {
+      "value": "${USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT}"
     }
   }
 }
