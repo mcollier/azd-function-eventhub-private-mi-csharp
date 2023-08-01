@@ -28,6 +28,6 @@ jobs:
       
       - name: 'Run Azure CLI commands'
         run: |
-          if [$(az group exists --resource-group 'rg-${{ vars.AZURE_ENV_NAME }}') == 'true']; then
+          if [ $(az group exists --resource-group 'rg-${{ vars.AZURE_ENV_NAME }}') == 'true' ]; then
             az group delete --resource-group 'rg-${{ vars.AZURE_ENV_NAME }}' --yes 
           fi
