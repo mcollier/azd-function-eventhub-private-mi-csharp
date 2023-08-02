@@ -24,7 +24,7 @@ var tags = {
 var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
-// var useVirtualNetwork = useVirtualNetworkIntegration
+var useVirtualNetwork = useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint
 var virtualNetworkAddressSpacePrefix = '10.1.0.0/16'
 var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
 var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
@@ -199,7 +199,7 @@ module keyVault 'core/security/keyvault.bicep' = {
 
 // TODO: Figure out why putting a conditional on the NSG modules causes this error: "ResourceGroupNotFound: Resource group 'rg-private-function-dev' could not be found."
 //  It happens for both NSG modules.
-module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
+module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetwork) {
   name: 'integrationSubnetNsg'
   scope: rg
   params: {
@@ -208,7 +208,7 @@ module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if 
   }
 }
 
-module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
+module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetwork) {
   name: 'privateEndpointSubnetNsg'
   scope: rg
   params: {
@@ -217,7 +217,7 @@ module privateEndpointSubnetNsg 'core/networking/network-security-group.bicep' =
   }
 }
 
-module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint) {
+module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
   name: 'vnet'
   scope: rg
   params: {
@@ -232,7 +232,7 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetworkInt
       {
         name: virtualNetworkIntegrationSubnetName
         addressPrefix: virtualNeworkIntegrationSubnetAddressSpacePrefix
-        networkSecurityGroupId: integrationSubnetNsg.outputs.id
+        networkSecurityGroupId: useVirtualNetwork ? integrationSubnetNsg.outputs.id : null
 
         delegations: [
           {
@@ -246,7 +246,7 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetworkInt
       {
         name: virtualNetworkPrivateEndpointSubnetName
         addressPrefix: virtualNetworkPrivateEndpointSubnetAddressSpacePrefix
-        networkSecurityGroupId: privateEndpointSubnetNsg.outputs.id
+        networkSecurityGroupId: useVirtualNetwork ? privateEndpointSubnetNsg.outputs.id : null
         privateEndpointNetworkPolicies: 'Disabled'
       }
     ]
