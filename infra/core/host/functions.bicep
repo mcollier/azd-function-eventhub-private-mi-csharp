@@ -55,24 +55,18 @@ param functionsRuntimeScaleMonitoringEnabled bool = false
 param virtualNetworkName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
-param isBehindVirtualNetwork bool = false
+param useVirtualNetworkPrivateEndpoint bool = false
+param useVirtualNetworkIntegration bool = false
 param userAssignedIdentityName string = ''
 
-// param isStorageAccountPrivate bool = false
-// param isVirtualNetworkIntegrated bool = false
-
-// var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
-// var functionWebsiteAzureFileConnectionStringSecretName = 'AzureFunctionContentAzureFileConnectionStringSecret'
-
 //NEW
-// TODO: Configurable?
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(userAssignedIdentityName)) {
   name: userAssignedIdentityName
 }
 
 //NEW
-//if (useVirtualNetwork) {
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (!empty(virtualNetworkName)) {
+// resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (!empty(virtualNetworkName)) {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetworkIntegration) {
   name: virtualNetworkName
 
   resource integrationSubnet 'subnets' existing = {
@@ -117,7 +111,8 @@ module functions 'appservice.bicep' = {
     use32BitWorkerProcess: use32BitWorkerProcess
 
     //NEW
-    virtualNetworkSubnetId: empty(virtualNetworkName) ? '' : vnet::integrationSubnet.id
+    // virtualNetworkSubnetId: empty(virtualNetworkName) ? '' : vnet::integrationSubnet.id
+    virtualNetworkSubnetId: useVirtualNetworkIntegration ? vnet::integrationSubnet.id : ''
     keyVaultReferenceIdentity: empty(userAssignedIdentityName) ? '' : uami.id
     vnetRouteAllEnabled: vnetRouteAllEnabled
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
@@ -129,7 +124,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2021-09-01' existing = {
   name: storageAccountName
 }
 
-resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (isBehindVirtualNetwork) {
+resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'pe-${name}-site'
   location: location
   properties: {
@@ -164,12 +159,12 @@ resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-0
   }
 }
 
-resource appServicePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (isBehindVirtualNetwork) {
+resource appServicePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'privatelink.azurewebsites.net'
   location: 'Global'
 }
 
-module appServiceDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (isBehindVirtualNetwork) {
+module appServiceDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'privatelink-appservice-vnet-link'
   params: {
     privateDnsZoneName: appServicePrivateDnsZone.name

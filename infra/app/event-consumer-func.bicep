@@ -10,17 +10,14 @@ param eventHubNamespaceName string
 param eventHubName string
 param eventHubConsumerGroupName string
 param keyVaultName string
-param isVirtualNetworkIntegrated bool = false
-param isBehindVirtualNetwork bool = false
+param useVirtualNetworkIntegration bool = false
+param useVirtualNetworkPrivateEndpoint bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
 param userAssignedIdentityName string = ''
 
-// param isStorageAccountPrivate bool = false
-// param vnetRouteAllEnabled bool = false
-
-var useVirtualNetwork = isBehindVirtualNetwork || isVirtualNetworkIntegrated
+// var useVirtualNetwork = useVirtualNetworkIsolation || useVirtualNetworkIntegration
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(userAssignedIdentityName)) {
   name: userAssignedIdentityName
@@ -60,7 +57,8 @@ module function '../core/host/functions.bicep' = {
     virtualNetworkIntegrationSubnetName: vnet::integrationSubnet.name
     virtualNetworkPrivateEndpointSubnetName: vnet::privateEndpointSubnet.name
     applicationInsightsName: appInsights.name
-    isBehindVirtualNetwork: isBehindVirtualNetwork
+    useVirtualNetworkIntegration: useVirtualNetworkIntegration
+    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
     // userAssignedIdentityName: uami.name
     appSettings: {
       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.name}.servicebus.windows.net'
@@ -111,7 +109,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' existing = {
   name: keyVaultName
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetwork) {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetworkPrivateEndpoint || useVirtualNetworkIntegration) {
   name: virtualNetworkName
 
   resource privateEndpointSubnet 'subnets' existing = {

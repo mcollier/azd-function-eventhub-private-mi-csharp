@@ -6,7 +6,7 @@ param tags object = {}
 param sku string = 'Standard'
 param capacity int = 1
 
-param isBehindVirtualNetwork bool = false
+param useVirtualNetworkPrivateEndpoint bool = false
 param virtualNetworkName string = ''
 param virtualNetworkPrivateEndpointSubnetName string = ''
 
@@ -23,13 +23,13 @@ resource namespace 'Microsoft.EventHub/namespaces@2021-11-01' = {
   resource networkRules 'networkRuleSets' = {
     name: 'default'
     properties: {
-      defaultAction: isBehindVirtualNetwork ? 'Deny' : 'Allow'
-      publicNetworkAccess: isBehindVirtualNetwork ? 'Disabled' : 'Enabled'
+      defaultAction: useVirtualNetworkPrivateEndpoint ? 'Deny' : 'Allow'
+      publicNetworkAccess: useVirtualNetworkPrivateEndpoint ? 'Disabled' : 'Enabled'
     }
   }
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBehindVirtualNetwork) {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetworkPrivateEndpoint) {
   name: virtualNetworkName
 
   resource subnet 'subnets' existing = {
@@ -37,7 +37,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (isBe
   }
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (isBehindVirtualNetwork) {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'pe-${namespace.name}'
   location: location
   properties: {
@@ -74,12 +74,12 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (i
   }
 }
 
-resource eventHubPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (isBehindVirtualNetwork) {
+resource eventHubPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'privatelink.servicebus.windows.net'
   location: 'Global'
 }
 
-module privateDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (isBehindVirtualNetwork) {
+module privateDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'privatelink-${namespace.name}-vnet-link'
   params: {
     privateDnsZoneName: eventHubPrivateDnsZone.name
