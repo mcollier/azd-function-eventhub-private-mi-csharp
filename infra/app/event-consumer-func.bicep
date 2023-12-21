@@ -17,10 +17,21 @@ param virtualNetworkPrivateEndpointSubnetName string = ''
 param virtualNetworkIntegrationSubnetName string = ''
 param userAssignedIdentityName string = ''
 
+var storageSecretName = 'storage-connection-string'
+
 // var useVirtualNetwork = useVirtualNetworkIsolation || useVirtualNetworkIntegration
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(userAssignedIdentityName)) {
   name: userAssignedIdentityName
+}
+
+module storageKeyVaultSecret '../core/security/keyvault-secret.bicep' = {
+  name: 'storageKeyVaultSecret'
+  params: {
+    name: storageSecretName
+    keyVaultName: keyVault.name
+    secretValue: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+  }
 }
 
 module functionPlan '../core/host/functionplan.bicep' = {
@@ -68,7 +79,8 @@ module function '../core/host/functions.bicep' = {
       // Needed for EP plans
       WEBSITE_CONTENTSHARE: functionAppName
       // TODO: Move to Key Vault (need to use user-assigned managed identity). See https://github.com/Azure/azure-functions-host/issues/7094
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      // WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${storageSecretName})'
 
       // If the storage account is private . . .
       WEBSITE_CONTENTOVERVNET: 1

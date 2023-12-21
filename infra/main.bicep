@@ -75,6 +75,7 @@ resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinit
 // }
 
 // TODO: Scope to the specific resource (Event Hub, Storage, Key Vault) instead of the resource group.
+//       See https://github.com/Azure/bicep/discussions/5926
 module storageRoleAssignment 'core/security/role.bicep' = {
   name: 'storageRoleAssignment'
   scope: rg
@@ -185,7 +186,6 @@ module eventHub './core/messaging/event-hub.bicep' = {
   }
 }
 
-// TODO: Configure vnet
 module keyVault 'core/security/keyvault.bicep' = {
   name: 'keyVault'
   scope: rg
@@ -194,6 +194,9 @@ module keyVault 'core/security/keyvault.bicep' = {
     location: location
     tags: tags
     enabledForRbacAuthorization: true
+    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
+    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
+    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
