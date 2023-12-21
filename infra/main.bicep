@@ -34,6 +34,7 @@ var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSub
 
 var eventHubConsumerGroupName = 'widgetfunctionconsumergroup'
 var functionAppName = '${abbrs.webSitesFunctions}${resourceToken}'
+var storageSecretName = 'storage-connection-string'
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: 'rg-${environmentName}'
@@ -64,23 +65,13 @@ resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinit
   name: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 }
 
-// module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
-//   name: 'userAssignedManagedIdentity'
-//   scope: rg
-//   params: {
-//     name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
-//     location: location
-//     tags: tags
-//   }
-// }
-
 // TODO: Scope to the specific resource (Event Hub, Storage, Key Vault) instead of the resource group.
 //       See https://github.com/Azure/bicep/discussions/5926
 module storageRoleAssignment 'core/security/role.bicep' = {
   name: 'storageRoleAssignment'
   scope: rg
   params: {
-    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id
+    principalId: functionApp.outputs.identityPrincipalId
     roleDefinitionId: storageBlobDataOwnerRoleDefinition.name
     principalType: 'ServicePrincipal'
   }
@@ -90,7 +81,7 @@ module eventHubReceiverRoleAssignment 'core/security/role.bicep' = {
   name: 'eventHubReceiverRoleAssignment'
   scope: rg
   params: {
-    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id
+    principalId: functionApp.outputs.identityPrincipalId
     roleDefinitionId: eventHubDataReceiverUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -100,7 +91,7 @@ module eventHubSenderRoleAssignment 'core/security/role.bicep' = {
   name: 'eventHubSenderRoleAssignment'
   scope: rg
   params: {
-    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id
+    principalId: functionApp.outputs.identityPrincipalId
     roleDefinitionId: eventHubDataSenderUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -110,7 +101,7 @@ module keyVaultRoleAssignment 'core/security/role.bicep' = {
   name: 'keyVaultRoleAssignment'
   scope: rg
   params: {
-    principalId: eventConsumerFunction.outputs.function_app_identity_principal_id
+    principalId: functionApp.outputs.identityPrincipalId
     roleDefinitionId: keyVaultSecretUserRoleDefintion.name
     principalType: 'ServicePrincipal'
   }
@@ -154,9 +145,10 @@ module storage './core/storage/storage-account.bicep' = {
       }
     ]
 
+    // Set the key vault name to set the connection string as a secret in the key vault.
+    keyVaultName: keyVault.outputs.name
+
     useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
-    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
@@ -171,8 +163,6 @@ module eventHubNamespace './core/messaging/event-hub-namespace.bicep' = {
     sku: 'Standard'
 
     useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
-    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
@@ -195,13 +185,9 @@ module keyVault 'core/security/keyvault.bicep' = {
     tags: tags
     enabledForRbacAuthorization: true
     useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
-    virtualNetworkName: useVirtualNetworkPrivateEndpoint ? vnet.outputs.virtualNetworkName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkPrivateEndpoint ? virtualNetworkPrivateEndpointSubnetName : ''
   }
 }
 
-// TODO: Figure out why putting a conditional on the NSG modules causes this error: "ResourceGroupNotFound: Resource group 'rg-private-function-dev' could not be found."
-//  It happens for both NSG modules.
 module integrationSubnetNsg 'core/networking/network-security-group.bicep' = if (useVirtualNetwork) {
   name: 'integrationSubnetNsg'
   scope: rg
@@ -256,25 +242,90 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
   }
 }
 
-module eventConsumerFunction 'app/event-consumer-func.bicep' = {
-  name: 'event-consumer-function'
+// Sets up private endpoints and private dns zones for the resources.
+module networking 'core/networking/networking.bicep' = if (useVirtualNetworkPrivateEndpoint) {
+  name: 'networking'
   scope: rg
   params: {
-    name: 'event-consumer-func'
     location: location
-    tags: tags
-    functionAppPlanName: '${abbrs.webServerFarms}${resourceToken}'
-    functionAppName: functionAppName
-    applicationInsightsName: appInsights.outputs.name
-    eventHubConsumerGroupName: eventHubConsumerGroupName
-    eventHubName: eventHub.outputs.EventHubName
     eventHubNamespaceName: eventHubNamespace.outputs.eventHubNamespaceName
     keyVaultName: keyVault.outputs.name
-    storageAccountName: storage.outputs.name
-    useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
-    useVirtualNetworkIntegration: useVirtualNetworkIntegration
-    virtualNetworkIntegrationSubnetName: useVirtualNetworkIntegration ? virtualNetworkIntegrationSubnetName : ''
-    virtualNetworkPrivateEndpointSubnetName: useVirtualNetworkIntegration ? virtualNetworkPrivateEndpointSubnetName : ''
-    virtualNetworkName: useVirtualNetworkIntegration ? vnet.outputs.virtualNetworkName : ''
+    storageAccoutnName: storage.outputs.name
+    functionName: functionApp.outputs.name
+    virtualNetworkIntegrationSubnetName: virtualNetworkIntegrationSubnetName
+    virtualNetworkName: virtualNetworkName
+    virtualNetworkPrivateEndpointSubnetName: virtualNetworkPrivateEndpointSubnetName
   }
 }
+
+module functionPlan 'core/host/functionplan.bicep' = {
+  name: 'functionPlan'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    OperatingSystem: 'Linux'
+    name: '${abbrs.webServerFarms}${resourceToken}'
+    planSku: 'EP1'
+  }
+}
+
+module functionApp 'core/host/functions.bicep' = {
+  name: 'functionApp'
+  scope: rg
+  params: {
+    location: location
+    tags: union(tags, { 'azd-service-name': 'event-consumer-func' })
+    name: functionAppName
+    appServicePlanId: functionPlan.outputs.planId
+    managedIdentity: true // creates a system assigned identity
+    functionsWorkerRuntime: 'dotnet'
+    runtimeName: 'dotnetcore'
+    runtimeVersion: '6.0'
+    extensionVersion: '~4'
+    storageAccountName: storage.outputs.name
+    vnetRouteAllEnabled: true
+    kind: 'functionapp,linux'
+    alwaysOn: false
+    enableOryxBuild: false
+    scmDoBuildDuringDeployment: false
+    functionsRuntimeScaleMonitoringEnabled: true
+    applicationInsightsName: appInsights.outputs.name
+    virtualNetworkIntegrationSubnetId: useVirtualNetworkIntegration ? vnet.outputs.vnetSubnets[0].id : ''
+    appSettings: {
+      EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.outputs.eventHubNamespaceName}.servicebus.windows.net'
+      EventHubName: eventHub.outputs.EventHubName
+      EventHubConsumerGroup: eventHub.outputs.EventHubConsumerGroupName
+
+      // Needed for EP plans
+      WEBSITE_CONTENTSHARE: functionAppName
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=${storageSecretName})'
+
+      // If the storage account is private . . .
+      WEBSITE_CONTENTOVERVNET: 1
+
+      // WEBSITE_SKIP_CONTENTSHARE_VALIDATE should be set to 1 when using vnet private endpoint
+      // for Azure Storage or when WEBSITE_CONTENTAZUREFILECONNECTIONSTRING uses a
+      // key vault reference. See https://github.com/Azure/azure-functions-host/issues/7094
+      WEBSITE_SKIP_CONTENTSHARE_VALIDATION: 1
+
+      // Need the settings below if using (user-assigned) identity-based connection for AzureWebJobsStorage or EventHubConnection
+      // EventHubConnection__clientId: uami.properties.clientId
+      // EventHubConnection__credential: 'managedidentity'
+      // AzureWebJobsStorage__accountName: storage.name
+      // AzureWebJobsStorage__credential: 'managedidentity'
+      // AzureWebJobsStorage__clientId: uami.properties.clientId
+
+    }
+  }
+}
+
+// module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
+//   name: 'userAssignedManagedIdentity'
+//   scope: rg
+//   params: {
+//     name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+//     location: location
+//     tags: tags
+//   }
+// }

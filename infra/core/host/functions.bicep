@@ -52,30 +52,12 @@ param use32BitWorkerProcess bool = false
 // NEW
 param vnetRouteAllEnabled bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
-param virtualNetworkName string = ''
-param virtualNetworkIntegrationSubnetName string = ''
-param virtualNetworkPrivateEndpointSubnetName string = ''
-param useVirtualNetworkPrivateEndpoint bool = false
-param useVirtualNetworkIntegration bool = false
 param userAssignedIdentityName string = ''
+param virtualNetworkIntegrationSubnetId string = ''
 
 //NEW
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(userAssignedIdentityName)) {
   name: userAssignedIdentityName
-}
-
-//NEW
-// resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (!empty(virtualNetworkName)) {
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = if (useVirtualNetworkIntegration) {
-  name: virtualNetworkName
-
-  resource integrationSubnet 'subnets' existing = {
-    name: virtualNetworkIntegrationSubnetName
-  }
-
-  resource privateEndpointSubnet 'subnets' existing = {
-    name: virtualNetworkPrivateEndpointSubnetName
-  }
 }
 
 module functions 'appservice.bicep' = {
@@ -111,8 +93,7 @@ module functions 'appservice.bicep' = {
     use32BitWorkerProcess: use32BitWorkerProcess
 
     //NEW
-    // virtualNetworkSubnetId: empty(virtualNetworkName) ? '' : vnet::integrationSubnet.id
-    virtualNetworkSubnetId: useVirtualNetworkIntegration ? vnet::integrationSubnet.id : ''
+    virtualNetworkSubnetId: empty(virtualNetworkIntegrationSubnetId) ? '' : virtualNetworkIntegrationSubnetId
     keyVaultReferenceIdentity: empty(userAssignedIdentityName) ? '' : uami.id
     vnetRouteAllEnabled: vnetRouteAllEnabled
     functionsRuntimeScaleMonitoringEnabled: functionsRuntimeScaleMonitoringEnabled
@@ -122,55 +103,6 @@ module functions 'appservice.bicep' = {
 
 resource storage 'Microsoft.Storage/storageAccounts@2021-09-01' existing = {
   name: storageAccountName
-}
-
-resource appServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-11-01' = if (useVirtualNetworkPrivateEndpoint) {
-  name: 'pe-${name}-site'
-  location: location
-  properties: {
-    subnet: {
-      id: vnet::privateEndpointSubnet.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'plsc-${name}-site'
-        properties: {
-          privateLinkServiceId: functions.outputs.id
-          groupIds: [
-            'sites'
-          ]
-        }
-      }
-    ]
-  }
-
-  resource zoneGroup 'privateDnsZoneGroups' = {
-    name: 'appServicePrivateDnsZoneGroup'
-    properties: {
-      privateDnsZoneConfigs: [
-        {
-          name: 'config'
-          properties: {
-            privateDnsZoneId: appServicePrivateDnsZone.id
-          }
-        }
-      ]
-    }
-  }
-}
-
-resource appServicePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (useVirtualNetworkPrivateEndpoint) {
-  name: 'privatelink.azurewebsites.net'
-  location: 'Global'
-}
-
-module appServiceDnsZoneLink '../networking/dns-zone-vnet-mapping.bicep' = if (useVirtualNetworkPrivateEndpoint) {
-  name: 'privatelink-appservice-vnet-link'
-  params: {
-    privateDnsZoneName: appServicePrivateDnsZone.name
-    vnetId: vnet.id
-    vnetLinkName: '${vnet.name}-link'
-  }
 }
 
 output identityPrincipalId string = managedIdentity ? functions.outputs.identityPrincipalId : ''

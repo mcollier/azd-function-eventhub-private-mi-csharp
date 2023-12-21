@@ -4,9 +4,6 @@ param subnetId string
 param privateLinkServiceConnectionName string = 'privateLinkServiceConnection'
 param privateLinkServiceId string
 param groupIds array = []
-// param privateDnsZoneGroupName string = 'privateDnsZoneGroup'
-// param privateDnsZoneId string
-// param privateDnsZoneName string
 param virtualNetworkName string
 param dnsZoneName string
 
@@ -45,7 +42,6 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-06-01' = {
         {
           name: 'config'
           properties: {
-            //privateDnsZoneId: privateDnsZoneId
             privateDnsZoneId: privateDnsZone.outputs.privateDnsZoneId
           }
         }

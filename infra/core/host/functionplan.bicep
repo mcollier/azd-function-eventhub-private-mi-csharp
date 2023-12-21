@@ -52,3 +52,4 @@ module appServicePlan 'appserviceplan.bicep' = {
 }
 
 output planId string = appServicePlan.outputs.id
+output planName string = appServicePlan.outputs.name
