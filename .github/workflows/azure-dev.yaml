@@ -74,7 +74,7 @@ jobs:
           USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT: ${{vars.USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT }}
 
       - name: Provision with vnet (provision)
-        run: azd provision --no-prompt
+        run: azd provision --no-state --no-prompt
         env:
           AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}-vnet
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
