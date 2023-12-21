@@ -13,6 +13,15 @@
     },
     "useVirtualNetworkPrivateEndpoint": {
       "value": "${USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT}"
+    },
+    "virtualNetworkAddressSpacePrefix": {
+      "value": "${VIRTUAL_NETWORK_ADDRESS_SPACE_PREFIX}"
+    },
+    "virtualNetworkIntegrationSubnetAddressSpacePrefix": {
+      "value": "${VIRTUAL_NETWORK_INTEGRATION_SUBNET_ADDRESS_SPACE_PREFIX}"
+    },
+    "virtualNetworkPrivateEndpointSubnetAddressSpacePrefix": {
+      "value": "${VIRTUAL_NETWORK_PRIVATE_ENDPOINT_SUBNET_ADDRESS_SPACE_PREFIX}"
     }
   }
 }

@@ -11,6 +11,9 @@ param location string
 
 param useVirtualNetworkIntegration bool = false
 param useVirtualNetworkPrivateEndpoint bool = false
+param virtualNetworkAddressSpacePrefix string = '10.1.0.0/16'
+param virtualNetworkIntegrationSubnetAddressSpacePrefix string = '10.1.1.0/24'
+param virtualNetworkPrivateEndpointSubnetAddressSpacePrefix string = '10.1.2.0/24'
 
 // Tags that should be applied to all resources.
 // 
@@ -25,9 +28,6 @@ var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
 var useVirtualNetwork = useVirtualNetworkIntegration || useVirtualNetworkPrivateEndpoint
-var virtualNetworkAddressSpacePrefix = '10.1.0.0/16'
-var virtualNeworkIntegrationSubnetAddressSpacePrefix = '10.1.1.0/24'
-var virtualNetworkPrivateEndpointSubnetAddressSpacePrefix = '10.1.2.0/24'
 var virtualNetworkName = '${abbrs.networkVirtualNetworks}${resourceToken}'
 var virtualNetworkIntegrationSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-int'
 var virtualNetworkPrivateEndpointSubnetName = '${abbrs.networkVirtualNetworksSubnets}${resourceToken}-pe'
@@ -220,7 +220,7 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
     subnets: [
       {
         name: virtualNetworkIntegrationSubnetName
-        addressPrefix: virtualNeworkIntegrationSubnetAddressSpacePrefix
+        addressPrefix: virtualNetworkIntegrationSubnetAddressSpacePrefix
         networkSecurityGroupId: useVirtualNetwork ? integrationSubnetNsg.outputs.id : null
 
         delegations: [
