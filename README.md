@@ -33,7 +33,7 @@ The function app will be configured to use the managed identity to connect to th
 1. Add the following settings to your AZD environment for local development (no vnets):
     - `USE_VIRTUAL_NETWORK_INTEGRATION="false"`
     - `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="false"`
-1. For working locally (no vnets), use the `azd up` command to provision the Azure resources and deploy the Azure Function code.
+1. For working locally (no vnets), use the `azd up` command to provision the Azure resources and deploy the Azure Function code.  The Azure Function is a simple function which sends an event to the provisioned Event Hub every 5 minutes.
 1. When using vnets and `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="true"`, use the `azd provision` command to provision the Azure resources.  
    You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network. 
   

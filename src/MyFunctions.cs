@@ -6,9 +6,9 @@ using Azure.Messaging.EventHubs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
-namespace Company.Function
+namespace Contoso.Function
 {
-    public static class EventHubTrigger1
+    public static class MyFuntions
     {
         [FunctionName("TimerTriggerToEventHub")]
         public static async Task TimerTriggerToEventHubFunction([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
@@ -22,7 +22,7 @@ namespace Company.Function
             await outputEvents.AddAsync(messageBody);
         }
 
-        [FunctionName("EventHubTrigger1")]
+        [FunctionName("EventHubTrigger")]
         public static async Task EventConsumerFunction([EventHubTrigger("%EventHubName%", Connection = "EventHubConnection", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] events, ILogger log)
         {
             var exceptions = new List<Exception>();
