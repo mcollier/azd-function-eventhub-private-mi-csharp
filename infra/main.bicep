@@ -291,7 +291,7 @@ module functionApp 'core/host/functions.bicep' = {
     scmDoBuildDuringDeployment: false
     functionsRuntimeScaleMonitoringEnabled: true
     applicationInsightsName: appInsights.outputs.name
-    virtualNetworkIntegrationSubnetId: useVirtualNetworkIntegration ? vnet.outputs.vnetSubnets[0].id : ''
+    virtualNetworkIntegrationSubnetId: useVirtualNetworkIntegration ? vnet.outputs.virtualNetworkSubnets[0].id : ''
     appSettings: {
       EventHubConnection__fullyQualifiedNamespace: '${eventHubNamespace.outputs.eventHubNamespaceName}.servicebus.windows.net'
       EventHubName: eventHub.outputs.EventHubName
