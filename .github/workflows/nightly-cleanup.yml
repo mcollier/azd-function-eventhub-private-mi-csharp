@@ -50,14 +50,14 @@ jobs:
             AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
        - name: Tear down
-         run: azd down --force --purge
+         run: azd down --no-prompt --force --purge
          env:
            AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
            AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
            AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
        - name: Tear down (with vnet)
-         run: azd down --force --purge
+         run: azd down --no-prompt --force --purge
          env:
            AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}-vnet
            AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
