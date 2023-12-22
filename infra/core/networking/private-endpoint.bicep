@@ -7,7 +7,6 @@ param groupIds array = []
 param virtualNetworkName string
 param dnsZoneName string
 
-// TODO: Should the private-dns-zone.bicep be included here?
 module privateDnsZone 'private-dns-zone.bicep' = {
   name: '${deployment().name}-private-dns-zone'
   params: {

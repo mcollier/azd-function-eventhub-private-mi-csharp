@@ -91,7 +91,7 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
   // TODO: Support user assigned managed identity.
   identity: { type: managedIdentity ? 'SystemAssigned' : 'None' }
 
-  // TODO: App Service logs aren't used for Function Apps.This isn't working with EP plans
+  // NOTE: App Service logs aren't used for Function Apps.This isn't working with EP plans
   // when setting WEBSITE_CONTENTAZUREFILECONNECTIONSTRING and WEBSITE_CONTENTSHARE
   resource configLogs 'config' = if (!isFunctionApp) {
     name: 'logs'

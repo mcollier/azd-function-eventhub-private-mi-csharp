@@ -4,7 +4,7 @@
 
 This AZD template will deploy the following resources:
 
-- Virtual network with two subnets
+- Virtual network with two subnets (optional)
 - Azure Function Premium plan
   - Optional support for virtual network integration
 - Azure Function app
@@ -19,7 +19,9 @@ This AZD template will deploy the following resources:
 - Storage account
   - Optional support for virtual network private endpoint
 
-The function app will be configured to use the managed identity to connect to the Event Hub and Azure Storage resources.  The Azure Storage connection string for `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` is placed within the provisioned Key Vault resource.
+The function app will be configured to use managed identity to connect to the Event Hub, Key Vault, and Azure Storage resources.  The Azure Storage connection string for `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` is placed within the provisioned Key Vault resource.
+
+> NOTE: [Azure Files does not support use of managed identity when accessing the file share](https://learn.microsoft.com/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-csharp#configure-an-identity-based-connection).  As such, the Azure Storage connection string for `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` is stored in Azure Key Vault.
 
 ## High-level architecture
 
@@ -53,3 +55,5 @@ Alternatively, the Azure resources can be configured to use virtual network inte
 
 1. For working locally (no vnets), use the `azd up` command to provision the Azure resources and deploy the Azure Function code.  The Azure Function is a simple function which sends an event to the provisioned Event Hub every 5 minutes.
 1. When using vnets and `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="true"`, use the `azd provision` command to provision the Azure resources.  You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network.
+
+    > NOTE: If you want to deploy the function code and are not connected to the virtual network, use the Azure Portal to configure networking access restrictions for the function app to allow public access.  The run `azd deploy` to deploy the application.
