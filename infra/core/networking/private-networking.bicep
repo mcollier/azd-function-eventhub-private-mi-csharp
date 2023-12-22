@@ -54,7 +54,7 @@ module storagePrivateEndpoint 'private-endpoint.bicep' = [for (svc, i) in storag
   params: {
     dnsZoneName: 'privatelink.${svc}.${environment().suffixes.storage}'
     location: location
-    privateEndpointName: 'pe-${svc}'
+    privateEndpointName: 'pe-${storage.name}-${svc}'
     privateLinkServiceId: storage.id
     subnetId: vnet::privateEndpointSubnet.id
     virtualNetworkName: vnet.name
