@@ -6,11 +6,15 @@ param principalId string = ''
 
 // NEW
 param enabledForRbacAuthorization bool = false
+param useVirtualNetworkPrivateEndpoint bool = false
+@allowed([ 'Enabled', 'Disabled' ])
+param publicNetworkAccess string = useVirtualNetworkPrivateEndpoint ? 'Disabled' : 'Enabled'
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: name
   location: location
   tags: tags
+
   properties: {
     tenantId: subscription().tenantId
     sku: { family: 'A', name: 'standard' }
@@ -22,6 +26,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
         tenantId: subscription().tenantId
       }
     ] : []
+    publicNetworkAccess: publicNetworkAccess
   }
 }
 
