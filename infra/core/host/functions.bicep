@@ -82,6 +82,7 @@ module functions 'appservice.bicep' = {
        ? { AzureWebJobsStorage__accountName: storage.name } 
        : { AzureWebJobsStorage: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=${storageKeyVaultSecretName})' }
     )
+    // If not using managed identity or Key Vault, use the connections string.
     // { AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}' }
 
     clientAffinityEnabled: clientAffinityEnabled
