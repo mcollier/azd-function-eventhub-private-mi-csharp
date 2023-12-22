@@ -2,8 +2,6 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 
-// param isLinux bool = true // false == Windows; true == Linux
-
 @allowed([ 'Windows', 'Linux' ])
 param OperatingSystem string = 'Linux'
 

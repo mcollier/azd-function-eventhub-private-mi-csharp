@@ -319,13 +319,3 @@ module functionApp 'core/host/functions.bicep' = {
     }
   }
 }
-
-// module userAssignedManagedIdentity './core/security/userAssignedIdentity.bicep' = {
-//   name: 'userAssignedManagedIdentity'
-//   scope: rg
-//   params: {
-//     name: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
-//     location: location
-//     tags: tags
-//   }
-// }
