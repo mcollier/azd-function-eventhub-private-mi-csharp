@@ -54,6 +54,7 @@ param vnetRouteAllEnabled bool = false
 param functionsRuntimeScaleMonitoringEnabled bool = false
 param userAssignedIdentityName string = ''
 param virtualNetworkIntegrationSubnetId string = ''
+param storageKeyVaultSecretName string = 'storage-connection-string'
 
 //NEW
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = if (!empty(userAssignedIdentityName)) {
@@ -71,12 +72,18 @@ module functions 'appservice.bicep' = {
     appCommandLine: appCommandLine
     applicationInsightsName: applicationInsightsName
     appServicePlanId: appServicePlanId
-    appSettings: union(appSettings, {
-        // TODO: It'd be nice if this used managed identity instead of connection string.
-        AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+    appSettings: union(appSettings,
+      {
         FUNCTIONS_EXTENSION_VERSION: extensionVersion
         FUNCTIONS_WORKER_RUNTIME: functionsWorkerRuntime
-      })
+      },
+      // Use the managed idenitty if available, otherwise use connection string in Key Vault.
+      (managedIdentity) 
+       ? { AzureWebJobsStorage__accountName: storage.name } 
+       : { AzureWebJobsStorage: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=${storageKeyVaultSecretName})' }
+    )
+    // { AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}' }
+
     clientAffinityEnabled: clientAffinityEnabled
     enableOryxBuild: enableOryxBuild
     functionAppScaleLimit: functionAppScaleLimit

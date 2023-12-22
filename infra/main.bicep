@@ -54,6 +54,7 @@ resource eventHubDataReceiverUserRoleDefintion 'Microsoft.Authorization/roleDefi
   name: 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde'
 }
 
+@description('This is the built-in role definition for the Azure Event Hubs Data Sender role. See https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#azure-event-hubs-data-sender for more information.')
 resource eventHubDataSenderUserRoleDefintion 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: subscription()
   name: '2b629674-e913-4c01-ae53-ef4638d8f975'
@@ -147,6 +148,7 @@ module storage './core/storage/storage-account.bicep' = {
 
     // Set the key vault name to set the connection string as a secret in the key vault.
     keyVaultName: keyVault.outputs.name
+    keyVaultSecretName: storageSecretName
 
     useVirtualNetworkPrivateEndpoint: useVirtualNetworkPrivateEndpoint
   }
@@ -243,7 +245,7 @@ module vnet './core/networking/virtual-network.bicep' = if (useVirtualNetwork) {
 }
 
 // Sets up private endpoints and private dns zones for the resources.
-module networking 'core/networking/networking.bicep' = if (useVirtualNetworkPrivateEndpoint) {
+module networking 'core/networking/private-networking.bicep' = if (useVirtualNetworkPrivateEndpoint) {
   name: 'networking'
   scope: rg
   params: {
@@ -278,6 +280,8 @@ module functionApp 'core/host/functions.bicep' = {
     tags: union(tags, { 'azd-service-name': 'event-consumer-func' })
     name: functionAppName
     appServicePlanId: functionPlan.outputs.planId
+    keyVaultName: keyVault.outputs.name
+    storageKeyVaultSecretName: storageSecretName
     managedIdentity: true // creates a system assigned identity
     functionsWorkerRuntime: 'dotnet'
     runtimeName: 'dotnetcore'
