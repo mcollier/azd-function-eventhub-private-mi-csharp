@@ -92,3 +92,21 @@ Optionally, use the included dev container which contains the necessary prerequi
 1. (Optional) When using vnets and `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="true"`, use the `azd provision` command to provision the Azure resources.  You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network.
 
     > NOTE: If you want to deploy the function code and are not connected to the virtual network, use the Azure Portal to configure networking access restrictions for the function app to allow public access.  The run `azd deploy` to deploy the application.
+
+### Run the Azure Function locally
+
+If there is a desire to provision the Azure resources and [run the Azure Function locally](https://learn.microsoft.com/azure/azure-functions/functions-develop-local) (e.g. dev & debugging purposes), you can use AZD (use the `azd provision` command) to provision the resources.  Once provisioned, update the [_local.settings.json_](https://learn.microsoft.com/azure/azure-functions/functions-develop-local#local-settings-file) file to refer to the newly provisioned Event Hub, Application Insights, and optionally Azure Storage (if not using Azurite).
+
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "[YOUR-APPLICATION-INSIGHTS-CONNECTION-STRING]",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "EventHubConnection": "[YOUR-EVENT-HUB-NAMESPACE-SHARED-ACCESS-POLICY-CONNECTION-STRING]",
+    "EventHubName": "evh-widget",
+    "EventHubConsumerGroup": "widgetfunctionconsumergroup"
+  }
+}
+```
