@@ -1,5 +1,7 @@
 # Azure Function with Event Hub with Virtual Network features
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mcollier/azd-function-eventhub-private-mi-csharp)
+
 This template will deploy an Azure Function, Event Hub, and supporting resources, with optional virtual network integration and private endpoints.  The following Azure resources are utilized:
 
 - Virtual network with two subnets (optional)
@@ -45,7 +47,7 @@ The following prerequisites are required to use this application.
 
 - [Azure Developer CLI](https://aka.ms/azd-install)
 - [.NET 6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
-- [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local)
+- [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (_to run Azure Function locally_)
 
 Optionally, use the included dev container which contains the necessary prerequisites.
 
@@ -61,7 +63,7 @@ Optionally, use the included dev container which contains the necessary prerequi
     azd init --template mcollier/azd-function-eventhub-private-mi-csharp
     ```
 
-1. When prompted by AZD, provide the name for the AZD environment to use without a virtual network.
+1. When prompted by AZD, provide the name (e.g., "my-function") for the AZD environment to use without a virtual network.
 1. Create enviroment settings to indicate that virtual network integation and private endpoints are not used.  The template defaults to __not__ using virtual network integration nor private endpoints; using the environment settings makes this explicit.
 
     ```bash
@@ -80,7 +82,7 @@ Optionally, use the included dev container which contains the necessary prerequi
     azd env set VIRTUAL_NETWORK_PRIVATE_ENDPOINT_SUBNET_ADDRESS_SPACE_PREFIX 10.1.2.0/24
     ```
 
-1. For working without virtual network functionality, use the `azd up` command to provision the Azure resources and deploy the Azure Function code.  The Azure Function is a simple function which sends an event to the provisioned Event Hub every 5 minutes.
+1. For working without virtual network functionality, use the `azd up` command to provision the Azure resources and deploy the Azure Function code.
 
     ```bash
     # Provision the Azure resources and deploy the Azure Function app.
