@@ -71,17 +71,6 @@ Optionally, use the included dev container which contains the necessary prerequi
     azd env set USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT false
     ```
 
-1. OPTIONAL - Create an AZD environmnent for use with a virtual network, and set the necessary environment settings.
-
-    ```bash
-    azd env new my-function-vnet
-    azd env set USE_VIRTUAL_NETWORK_INTEGRATION true
-    azd env set USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT true
-    azd env set VIRTUAL_NETWORK_ADDRESS_SPACE_PREFIX 10.1.0.0/16
-    azd env set VIRTUAL_NETWORK_INTEGRATION_SUBNET_ADDRESS_SPACE_PREFIX 10.1.1.0/24
-    azd env set VIRTUAL_NETWORK_PRIVATE_ENDPOINT_SUBNET_ADDRESS_SPACE_PREFIX 10.1.2.0/24
-    ```
-
 1. For working without virtual network functionality, use the `azd up` command to provision the Azure resources and deploy the Azure Function code.
 
     ```bash
@@ -89,7 +78,21 @@ Optionally, use the included dev container which contains the necessary prerequi
     azd up
     ```
 
-1. (Optional) When using vnets and `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="true"`, use the `azd provision` command to provision the Azure resources.  You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network.
+#### Optional: Use a virtual network
+
+1. Create an AZD environmnent for use with a virtual network, and set the necessary environment settings.
+
+    ```bash
+    azd env new my-function-vnet
+    
+    azd env set USE_VIRTUAL_NETWORK_INTEGRATION true
+    azd env set USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT true
+    azd env set VIRTUAL_NETWORK_ADDRESS_SPACE_PREFIX 10.1.0.0/16
+    azd env set VIRTUAL_NETWORK_INTEGRATION_SUBNET_ADDRESS_SPACE_PREFIX 10.1.1.0/24
+    azd env set VIRTUAL_NETWORK_PRIVATE_ENDPOINT_SUBNET_ADDRESS_SPACE_PREFIX 10.1.2.0/24
+    ```
+
+1. When using vnets and `USE_VIRTUAL_NETWORK_PRIVATE_ENDPOINT="true"`, use the `azd provision` command to provision the Azure resources.  You will not be able to deploy application code due to the private endpoint on the Azure Function.  Deployment will need to be done from an agent connected to the virtual network.
 
     > NOTE: If you want to deploy the function code and are not connected to the virtual network, use the Azure Portal to configure networking access restrictions for the function app to allow public access.  The run `azd deploy` to deploy the application.
 
