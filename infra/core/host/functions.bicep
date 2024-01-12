@@ -9,8 +9,6 @@ param keyVaultName string = ''
 param managedIdentity bool = !empty(keyVaultName)
 param storageAccountName string
 
-// NEW - These are incorrect for FUNCTIONS_WORKER_RUNTIME (https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#functions_worker_runtime)
-// dotnetcore is not a valid value for FUNCTIONS_WORKER_RUNTIME
 // Runtime Properties
 @allowed([
   'dotnet', 'dotnetcore', 'dotnet-isolated', 'node', 'python', 'java', 'powershell', 'custom'
@@ -18,11 +16,13 @@ param storageAccountName string
 param runtimeName string
 
 //NEW
+// NEW - These are incorrect for FUNCTIONS_WORKER_RUNTIME (https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#functions_worker_runtime)
+// dotnetcore is not a valid value for FUNCTIONS_WORKER_RUNTIME
 @allowed([
   'dotnet', 'dotnet-isolated', 'node', 'python', 'java', 'powershell', 'custom'
 ])
 param functionsWorkerRuntime string
-param runtimeNameAndVersion string = '${runtimeName}|${runtimeVersion}'
+param runtimeNameAndVersion string = '${functionsWorkerRuntime}|${runtimeVersion}'
 param runtimeVersion string
 
 // Function Settings
